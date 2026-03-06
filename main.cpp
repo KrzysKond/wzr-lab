@@ -14,6 +14,7 @@
 #include "objects.h"
 #include "graphics.h"
 #include "net.h"
+#include <ostream>
 using namespace std;
 
 
@@ -40,7 +41,7 @@ bool if_SHIFT_pressed = false;
 bool if_ID_visible = true;           // czy rysowac nr ID przy ka¿dym obiekcie
 bool if_mouse_control = false;       // sterowanie za pomoc¹ klawisza myszki
 int mouse_cursor_x = 0, mouse_cursor_y = 0;     // po³o¿enie kursora myszy
-
+bool received{ false };
 extern ViewParams viewpar;           // ustawienia widoku zdefiniowane w grafice
 
 long duration_of_day = 600;         // czas trwania dnia w [s]
@@ -67,9 +68,10 @@ DWORD WINAPI ReceiveThreadFun(void *ptr)
 	while (1)
 	{
 		int frame_size = pmt_net->reciv((char*)&frame, sizeof(Frame));   // oczekiwanie na nadejœcie ramki 
+		received = true;
 		ObjectState state = frame.state;
 
-		//fprintf(f, "odebrano stan iID = %d, ID dla mojego obiektu = %d\n", frame.iID, my_car->iID);
+		fprintf(f, "odebrano stan iID = %d, ID dla mojego obiektu = %d\n", frame.iID, my_car->iID);
 
 		// Lock the Critical section
 		EnterCriticalSection(&m_cs);               // wejœcie na œcie¿kê krytyczn¹ - by inne w¹tki (np. g³ówny) nie wspó³dzieli³ 
@@ -86,6 +88,7 @@ DWORD WINAPI ReceiveThreadFun(void *ptr)
 				other_cars[frame.iID] = ob;		
 				//fprintf(f, "zarejestrowano %d obcy obiekt o ID = %d\n", iLiczbaCudzychOb - 1, CudzeObiekty[iLiczbaCudzychOb]->iID);
 				OutputDebugString("Zarejestrowano obcy obiekt");
+				
 				//ob->FindPosition(other_cars);
 			}
 			other_cars[frame.iID]->ChangeState(state);   // aktualizacja stateu obiektu obcego 	
@@ -105,7 +108,6 @@ void InteractionInitialisation()
 	DWORD dwThreadId;
 
 	my_car = new MovableObject();    // tworzenie wlasnego obiektu
-	my_car->FindPosition(other_cars);
 	OutputDebugString("Zarejestrowano my_Car");
 
 	time_of_cycle = clock();             // pomiar aktualnego czasu
@@ -124,6 +126,12 @@ void InteractionInitialisation()
 		NULL,                        // use default creation flags
 		&dwThreadId);                // returns the thread identifier
 	SetThreadPriority(threadReciv, THREAD_PRIORITY_HIGHEST);
+
+	while (!received)
+	{
+		Sleep(100);
+	}
+	my_car->FindPosition(other_cars);
 
 	printf("start interakcji\n");
 }

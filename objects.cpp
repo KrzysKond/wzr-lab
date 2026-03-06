@@ -68,24 +68,31 @@ void MovableObject::FindPosition(MovableObject* other_cars, int car_count)
 
 }
 
+float GetRandomPos(float map_bounds)
+{
+	return fmodf((float)rand(), map_bounds);
+}
+
 void MovableObject::FindPosition(std::map<int, MovableObject*>& other_cars)
 {
 	Vector3 furthest_pos = { 0.f, 0.f, 0.f };
 	float best_length{FLT_MIN};
-	
+
 	for (int i = 0; i < 100; ++i)
 	{
-		Vector3 random_pos{(float)rand(), (float)rand(), (float)rand()};
+
+		Vector3 random_pos{GetRandomPos(env.max_bounds.x), GetRandomPos(env.max_bounds.y), GetRandomPos(env.max_bounds.z) };
 
 		uint32_t car_count{ (uint32_t)other_cars.size() };
 		for (auto& car : other_cars)
 		{
+			//if (car.first == this->iID) continue;
 			Vector3 pos{ car.second->state.vPos };
 
 			Vector3 diff{ pos - random_pos };
 			if (diff.length() > best_length)
 			{
-				furthest_pos = pos;
+				furthest_pos = random_pos;
 				best_length = diff.length();
 			}
 		}
@@ -368,7 +375,16 @@ Environment::Environment()
    Norm = new Vector3**[number_of_rows];
    for (long i=0;i<number_of_rows;i++) {
        Norm[i] = new Vector3*[number_of_columns];
-       for (long j=0;j<number_of_columns;j++) Norm[i][j] = new Vector3[4];
+	   for (long j = 0; j < number_of_columns; j++)
+	   {
+		   Norm[i][j] = new Vector3[4];
+		   min_bounds.x = (float)min(Norm[i][j]->x, min_bounds.x);
+		   min_bounds.y = (float)min(Norm[i][j]->y, min_bounds.y);
+		   min_bounds.z = (float)min(Norm[i][j]->z, min_bounds.z);
+		   max_bounds.x = (float)max(Norm[i][j]->x, max_bounds.x);
+		   max_bounds.y = (float)max(Norm[i][j]->y, max_bounds.y);
+		   max_bounds.z = (float)max(Norm[i][j]->z, max_bounds.z);
+	   }
    }    
        
    fprintf(f,"height_map env: number_of_rows = %d, number_of_columns = %d\n",number_of_rows,number_of_columns);

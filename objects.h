@@ -55,6 +55,8 @@ public:
 	Vector3 ***Norm;       // normalne do p³aszczyzn trójk¹tów
 	float field_size;    // length boku kwadratowego pola na mapie
 	long number_of_rows, number_of_columns; // liczba wierszy i kolumn mapy (kwadratów na wysokoœæ i szerokoœæ)     
+	Vector3 max_bounds{ FLT_MIN, FLT_MIN, FLT_MIN };
+	Vector3 min_bounds{ FLT_MAX, FLT_MAX, FLT_MAX };
 	Environment();
 	~Environment();
 	float DistFromGround(float x, float z);      // okreœlanie wysokoœci dla punktu o wsp. (x,z) 
