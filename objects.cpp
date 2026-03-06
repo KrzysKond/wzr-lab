@@ -507,12 +507,12 @@ void Environment::DrawInitialisation()
           d[w][k][CBE] = -(B^N);        
           Norm[w][k][CBE] = N;
 
-		  min_bounds.x = (float)min(d[w][k]->x, min_bounds.x);
-		  min_bounds.y = (float)min(d[w][k]->y, min_bounds.y);
-		  min_bounds.z = (float)min(d[w][k]->z, min_bounds.z);
-		  max_bounds.x = (float)max(d[w][k]->x, max_bounds.x);
-		  max_bounds.y = (float)max(d[w][k]->y, max_bounds.y);
-		  max_bounds.z = (float)max(d[w][k]->z, max_bounds.z);
+		  min_bounds.x = (float)min(Norm[w][k]->x * field_size, min_bounds.x);
+		  min_bounds.y = (float)min(Norm[w][k]->y * field_size, min_bounds.y);
+		  min_bounds.z = (float)min(Norm[w][k]->z * field_size, min_bounds.z);
+		  max_bounds.x = (float)max(Norm[w][k]->x * field_size, max_bounds.x);
+		  max_bounds.y = (float)max(Norm[w][k]->y * field_size, max_bounds.y);
+		  max_bounds.z = (float)max(Norm[w][k]->z * field_size, max_bounds.z);
       }		
 
 
