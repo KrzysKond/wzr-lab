@@ -91,7 +91,7 @@ void MovableObject::FindPosition(std::map<int, MovableObject*>& other_cars)
 			//if (car.first == this->iID) continue;
 			Vector3 pos{ car.second->state.vPos };
 
-			Vector3 diff{ pos - random_pos };ds
+			Vector3 diff{ pos - random_pos };
 			if (diff.length() > best_length)
 			{
 				furthest_pos = random_pos;

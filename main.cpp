@@ -64,10 +64,13 @@ DWORD WINAPI ReceiveThreadFun(void *ptr)
 {
 	multicast_net *pmt_net = (multicast_net*)ptr;  // wskaŸnik do obiektu klasy multicast_net
 	Frame frame;
+	//multi_send->send(reinterpret_cast<char*>(my_car), sizeof(MovableObject));
 
 	while (1)
 	{
 		int frame_size = pmt_net->reciv((char*)&frame, sizeof(Frame));   // oczekiwanie na nadejœcie ramki 
+		
+		if (frame.iID == my_car->iID) continue;
 		received = true;
 		ObjectState state = frame.state;
 
