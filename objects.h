@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "quaternion.h"
+#include <map>
 
 #define PI 3.1415926
 
@@ -37,6 +38,8 @@ public:
 	MovableObject();          // konstruktor
 	~MovableObject();
 	void ChangeState(ObjectState state);          // zmiana stateu obiektu
+	void FindPosition(MovableObject* other_cars, int car_count);
+	void FindPosition(std::map<int, MovableObject*>& other_cars);
 	ObjectState State();        // metoda zwracajaca state obiektu
 	void Simulation(float dt);  // symulacja ruchu obiektu w oparciu o biezacy state, przylozone sily
 	// oraz czas dzialania sil. Efektem symulacji jest nowy state obiektu 

@@ -11,11 +11,14 @@
 #include <gl\glu.h>
 #include "objects.h"
 #include "graphics.h"
+#include <random>
+#include <iostream>
 
 extern FILE *f;
 extern Environment env;
 
 extern bool if_ID_visible;
+
 
 
 MovableObject::MovableObject()             // konstruktor                   
@@ -56,6 +59,43 @@ MovableObject::~MovableObject()            // destruktor
 void MovableObject::ChangeState(ObjectState __state)  // przepisanie podanego stateu 
 {                                                // w przypadku obiektów, które nie s¹ symulowane
 	state = __state;
+}
+
+void MovableObject::FindPosition(MovableObject* other_cars, int car_count)
+{
+	Vector3 furthest_pos = { 0.f, 0.f, 0.f };
+
+
+}
+
+void MovableObject::FindPosition(std::map<int, MovableObject*>& other_cars)
+{
+	Vector3 furthest_pos = { 0.f, 0.f, 0.f };
+	float best_length{FLT_MIN};
+	
+	for (int i = 0; i < 100; ++i)
+	{
+		Vector3 random_pos{(float)rand(), (float)rand(), (float)rand()};
+
+		uint32_t car_count{ (uint32_t)other_cars.size() };
+		for (int i{ 0 }; i < car_count; ++i)
+		{
+			auto& car{ other_cars.at(i) };
+			Vector3 pos{ car->state.vPos };
+
+			Vector3 diff{ pos - random_pos };
+			if (diff.length() > best_length)
+			{
+				furthest_pos = pos;
+				best_length = diff.length();
+			}
+		}
+	}
+
+	this->state.vPos = furthest_pos;
+	char buffer[256]{};
+	snprintf(buffer, 256, "FOund pos: %f %f %f\n", furthest_pos.x, furthest_pos.y, furthest_pos.z);
+	OutputDebugString(buffer);
 }
 
 ObjectState MovableObject::State()                // metoda zwracaj¹ca state obiektu ³¹cznie z iID
@@ -317,6 +357,8 @@ Environment::Environment()
 	   wynik = ReadMap("..//map.txt");
    if (wynik == 0)
 	   fprintf(f, "Cannot open map.txt file. Check if this file exists in project directory!\n");
+
+
 
 
    d = new float**[number_of_rows];
