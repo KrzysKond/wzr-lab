@@ -78,10 +78,9 @@ void MovableObject::FindPosition(std::map<int, MovableObject*>& other_cars)
 		Vector3 random_pos{(float)rand(), (float)rand(), (float)rand()};
 
 		uint32_t car_count{ (uint32_t)other_cars.size() };
-		for (int i{ 0 }; i < car_count; ++i)
+		for (auto& car : other_cars)
 		{
-			auto& car{ other_cars.at(i) };
-			Vector3 pos{ car->state.vPos };
+			Vector3 pos{ car.second->state.vPos };
 
 			Vector3 diff{ pos - random_pos };
 			if (diff.length() > best_length)

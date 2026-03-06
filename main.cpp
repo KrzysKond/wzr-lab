@@ -73,6 +73,7 @@ DWORD WINAPI ReceiveThreadFun(void *ptr)
 
 		// Lock the Critical section
 		EnterCriticalSection(&m_cs);               // wejœcie na œcie¿kê krytyczn¹ - by inne w¹tki (np. g³ówny) nie wspó³dzieli³ 
+		//OutputDebugString("EnterCriticalSection");
 	                                               // tablicy other_cars
 		if (frame.iID != my_car->iID)          // jeœli to nie mój w³asny obiekt
 		{
@@ -85,7 +86,7 @@ DWORD WINAPI ReceiveThreadFun(void *ptr)
 				other_cars[frame.iID] = ob;		
 				//fprintf(f, "zarejestrowano %d obcy obiekt o ID = %d\n", iLiczbaCudzychOb - 1, CudzeObiekty[iLiczbaCudzychOb]->iID);
 				OutputDebugString("Zarejestrowano obcy obiekt");
-				ob->FindPosition(other_cars);
+				//ob->FindPosition(other_cars);
 			}
 			other_cars[frame.iID]->ChangeState(state);   // aktualizacja stateu obiektu obcego 	
 			
