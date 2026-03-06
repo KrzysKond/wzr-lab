@@ -78,6 +78,8 @@ void MovableObject::FindPosition(std::map<int, MovableObject*>& other_cars)
 	Vector3 furthest_pos = { 0.f, 0.f, 0.f };
 	float best_length{FLT_MIN};
 
+
+
 	for (int i = 0; i < 100; ++i)
 	{
 
@@ -378,12 +380,6 @@ Environment::Environment()
 	   for (long j = 0; j < number_of_columns; j++)
 	   {
 		   Norm[i][j] = new Vector3[4];
-		   min_bounds.x = (float)min(Norm[i][j]->x, min_bounds.x);
-		   min_bounds.y = (float)min(Norm[i][j]->y, min_bounds.y);
-		   min_bounds.z = (float)min(Norm[i][j]->z, min_bounds.z);
-		   max_bounds.x = (float)max(Norm[i][j]->x, max_bounds.x);
-		   max_bounds.y = (float)max(Norm[i][j]->y, max_bounds.y);
-		   max_bounds.z = (float)max(Norm[i][j]->z, max_bounds.z);
 	   }
    }    
        
@@ -510,7 +506,15 @@ void Environment::DrawInitialisation()
           glVertex3f( E.x, E.y, E.z);      
           d[w][k][CBE] = -(B^N);        
           Norm[w][k][CBE] = N;
+
+		  min_bounds.x = (float)min(Norm[w][k]->x, min_bounds.x);
+		  min_bounds.y = (float)min(Norm[w][k]->y, min_bounds.y);
+		  min_bounds.z = (float)min(Norm[w][k]->z, min_bounds.z);
+		  max_bounds.x = (float)max(Norm[w][k]->x, max_bounds.x);
+		  max_bounds.y = (float)max(Norm[w][k]->y, max_bounds.y);
+		  max_bounds.z = (float)max(Norm[w][k]->z, max_bounds.z);
       }		
+
 
   glEnd();
   glEndList(); 

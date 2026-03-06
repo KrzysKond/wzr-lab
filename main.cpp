@@ -127,11 +127,12 @@ void InteractionInitialisation()
 		&dwThreadId);                // returns the thread identifier
 	SetThreadPriority(threadReciv, THREAD_PRIORITY_HIGHEST);
 
+
+	my_car->FindPosition(other_cars);
 	while (!received)
 	{
 		Sleep(100);
 	}
-	my_car->FindPosition(other_cars);
 
 	printf("start interakcji\n");
 }
