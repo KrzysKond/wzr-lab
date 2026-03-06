@@ -91,7 +91,7 @@ void MovableObject::FindPosition(std::map<int, MovableObject*>& other_cars)
 			//if (car.first == this->iID) continue;
 			Vector3 pos{ car.second->state.vPos };
 
-			Vector3 diff{ pos - random_pos };
+			Vector3 diff{ pos - random_pos };ds
 			if (diff.length() > best_length)
 			{
 				furthest_pos = random_pos;
@@ -507,12 +507,12 @@ void Environment::DrawInitialisation()
           d[w][k][CBE] = -(B^N);        
           Norm[w][k][CBE] = N;
 
-		  min_bounds.x = (float)min(Norm[w][k]->x * field_size, min_bounds.x);
-		  min_bounds.y = (float)min(Norm[w][k]->y * field_size, min_bounds.y);
-		  min_bounds.z = (float)min(Norm[w][k]->z * field_size, min_bounds.z);
-		  max_bounds.x = (float)max(Norm[w][k]->x * field_size, max_bounds.x);
-		  max_bounds.y = (float)max(Norm[w][k]->y * field_size, max_bounds.y);
-		  max_bounds.z = (float)max(Norm[w][k]->z * field_size, max_bounds.z);
+		  min_bounds.x = (float)min(Norm[w][k]->x * field_size*number_of_columns/2, min_bounds.x);
+		  min_bounds.y = (float)min(Norm[w][k]->y, min_bounds.y);
+		  min_bounds.z = (float)min(Norm[w][k]->z * field_size * number_of_rows / 2, min_bounds.z);
+		  max_bounds.x = (float)max(Norm[w][k]->x * field_size*number_of_columns/2, max_bounds.x);
+		  max_bounds.y = (float)max(Norm[w][k]->y, max_bounds.y);
+		  max_bounds.z = (float)max(Norm[w][k]->z * field_size * number_of_rows / 2, max_bounds.z);
       }		
 
 
