@@ -102,6 +102,11 @@ int multicast_net::init_send()
 {
 	fprintf(stderr, "init sender");
 
+	// franc: Enable multicast loopback so we can receive our own datagrams to not block ourselves at the beginning in first frame
+	char loopback{ 1 };
+	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loopback, sizeof(loopback)))
+		DieWithError("setsockopt() failed");
+
 	// Set TTL of multicast packet 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (char *)&multicastTTL,
 		sizeof(multicastTTL)) < 0)

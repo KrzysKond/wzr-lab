@@ -64,14 +64,18 @@ DWORD WINAPI ReceiveThreadFun(void *ptr)
 {
 	multicast_net *pmt_net = (multicast_net*)ptr;  // wskaŸnik do obiektu klasy multicast_net
 	Frame frame;
-	//multi_send->send(reinterpret_cast<char*>(my_car), sizeof(MovableObject));
+	frame.state = my_car->State();
+	frame.iID = my_car->iID;
+
+	multi_send->send((char*)&frame, sizeof(Frame));
 
 	while (1)
 	{
 		int frame_size = pmt_net->reciv((char*)&frame, sizeof(Frame));   // oczekiwanie na nadejœcie ramki 
 		
-		if (frame.iID == my_car->iID) continue;
 		received = true;
+		if (frame.iID == my_car->iID) continue;
+
 		ObjectState state = frame.state;
 
 		fprintf(f, "odebrano stan iID = %d, ID dla mojego obiektu = %d\n", frame.iID, my_car->iID);
@@ -91,8 +95,6 @@ DWORD WINAPI ReceiveThreadFun(void *ptr)
 				other_cars[frame.iID] = ob;		
 				//fprintf(f, "zarejestrowano %d obcy obiekt o ID = %d\n", iLiczbaCudzychOb - 1, CudzeObiekty[iLiczbaCudzychOb]->iID);
 				OutputDebugString("Zarejestrowano obcy obiekt");
-				
-				//ob->FindPosition(other_cars);
 			}
 			other_cars[frame.iID]->ChangeState(state);   // aktualizacja stateu obiektu obcego 	
 			
@@ -131,11 +133,18 @@ void InteractionInitialisation()
 	SetThreadPriority(threadReciv, THREAD_PRIORITY_HIGHEST);
 
 
-	my_car->FindPosition(other_cars);
-	while (!received)
+	int wait_ms = 0;
+	while (!received && wait_ms < 2000)
 	{
 		Sleep(100);
+		wait_ms += 100;
 	}
+	EnterCriticalSection(&m_cs);
+	if (!other_cars.empty())
+	{
+		my_car->FindPosition(other_cars);
+	}
+	LeaveCriticalSection(&m_cs);
 
 	printf("start interakcji\n");
 }

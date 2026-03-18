@@ -76,27 +76,32 @@ float GetRandomPos(float map_bounds)
 void MovableObject::FindPosition(std::map<int, MovableObject*>& other_cars)
 {
 	Vector3 furthest_pos = { 0.f, 0.f, 0.f };
-	float best_length{FLT_MIN};
+	float best_min_distance{ 0.f };
 
-
-
-	for (int i = 0; i < 100; ++i)
+	for (int i = 0; i < 10000; ++i)
 	{
+		Vector3 random_pos{
+			GetRandomPos(env.max_bounds.x),
+			GetRandomPos(env.max_bounds.y),
+			GetRandomPos(env.max_bounds.z)
+		};
 
-		Vector3 random_pos{GetRandomPos(env.max_bounds.x), GetRandomPos(env.max_bounds.y), GetRandomPos(env.max_bounds.z) };
+		float min_distance = FLT_MAX;
 
-		uint32_t car_count{ (uint32_t)other_cars.size() };
 		for (auto& car : other_cars)
 		{
-			//if (car.first == this->iID) continue;
-			Vector3 pos{ car.second->state.vPos };
+			Vector3 diff = car.second->state.vPos - random_pos;
+			float distance = diff.length();
+			// found a closer car
+			if (distance < min_distance)
+				min_distance = distance;
+		}
 
-			Vector3 diff{ pos - random_pos };
-			if (diff.length() > best_length)
-			{
-				furthest_pos = random_pos;
-				best_length = diff.length();
-			}
+		// maximize the minimum distance
+		if (min_distance > best_min_distance)
+		{
+			best_min_distance = min_distance;
+			furthest_pos = random_pos;
 		}
 	}
 
