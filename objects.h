@@ -59,6 +59,7 @@ public:
 	Vector3 min_bounds{ FLT_MAX, FLT_MAX, FLT_MAX };
 	Environment();
 	~Environment();
+	Vector3 GetRandomPosInBounds();
 	float DistFromGround(float x, float z);      // okreœlanie wysokoœci dla punktu o wsp. (x,z) 
 	void Draw();	                      // odrysowywanie envu   
 	void DrawInitialisation();               // tworzenie listy wyœwietlania

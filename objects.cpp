@@ -68,29 +68,22 @@ void MovableObject::FindPosition(MovableObject* other_cars, int car_count)
 
 }
 
-float GetRandomPos(float map_bounds)
-{
-	return fmodf((float)rand(), map_bounds);
-}
+
 
 void MovableObject::FindPosition(std::map<int, MovableObject*>& other_cars)
 {
 	Vector3 furthest_pos = { 0.f, 0.f, 0.f };
 	float best_min_distance{ 0.f };
 
-	for (int i = 0; i < 10000; ++i)
+	for (int i = 0; i < 50000; ++i)
 	{
-		Vector3 random_pos{
-			GetRandomPos(env.max_bounds.x),
-			GetRandomPos(env.max_bounds.y),
-			GetRandomPos(env.max_bounds.z)
-		};
+		Vector3 random_pos{ env.GetRandomPosInBounds() };
 
 		float min_distance = FLT_MAX;
 
 		for (auto& car : other_cars)
 		{
-			Vector3 diff = car.second->state.vPos - random_pos;
+			Vector3 diff = { car.second->state.vPos.x - random_pos.x, 0.f, car.second->state.vPos.z - random_pos.z };
 			float distance = diff.length();
 			// found a closer car
 			if (distance < min_distance)
@@ -409,6 +402,21 @@ Environment::~Environment()
          
 }
 
+Vector3 Environment::GetRandomPosInBounds()
+{
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+
+	std::uniform_real_distribution<float> dist_x(min_bounds.x, max_bounds.x);
+	std::uniform_real_distribution<float> dist_z(min_bounds.z, max_bounds.z);
+
+	float x{ dist_x(gen) };
+	float z{ dist_z(gen) };
+	float y{ DistFromGround(x, z) + 5.f} ;
+
+	return Vector3{ x, y, z };
+}
+
 float Environment::DistFromGround(float x,float z)      // okreœlanie wysokoœci dla punktu o wsp. (x,z) 
 {
   
@@ -511,19 +519,34 @@ void Environment::DrawInitialisation()
           glVertex3f( E.x, E.y, E.z);      
           d[w][k][CBE] = -(B^N);        
           Norm[w][k][CBE] = N;
-
-		  min_bounds.x = (float)min(Norm[w][k]->x * field_size*number_of_columns/2, min_bounds.x);
-		  min_bounds.y = (float)min(Norm[w][k]->y, min_bounds.y);
-		  min_bounds.z = (float)min(Norm[w][k]->z * field_size * number_of_rows / 2, min_bounds.z);
-		  max_bounds.x = (float)max(Norm[w][k]->x * field_size*number_of_columns/2, max_bounds.x);
-		  max_bounds.y = (float)max(Norm[w][k]->y, max_bounds.y);
-		  max_bounds.z = (float)max(Norm[w][k]->z * field_size * number_of_rows / 2, max_bounds.z);
       }		
 
+	min_bounds = Vector3(FLT_MAX, FLT_MAX, FLT_MAX);
+	max_bounds = Vector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
-  glEnd();
-  glEndList(); 
-                 
+	for (long w = 0; w < number_of_rows; w++)
+	{
+		for (long k = 0; k < number_of_columns; k++)
+		{
+			Vector3 vertices[5]{ A, B, C, D, E };
+
+			for (int v = 0; v < 5; v++)
+			{
+				min_bounds.x = min(min_bounds.x, vertices[v].x);
+				min_bounds.y = min(min_bounds.y, vertices[v].y);
+				min_bounds.z = min(min_bounds.z, vertices[v].z);
+
+				max_bounds.x = max(max_bounds.x, vertices[v].x);
+				max_bounds.y = max(max_bounds.y, vertices[v].y);
+				max_bounds.z = max(max_bounds.z, vertices[v].z);
+			}
+		}
+	}
+
+	min_bounds = { -min_bounds.x, -min_bounds.y, -min_bounds.z };
+
+	glEnd();
+	glEndList(); 
 }
 
 // wczytanie powierzchni terenu (mapy wysokoœci) oraz przedmiotów  
