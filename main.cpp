@@ -12,6 +12,22 @@ float test_scenario[][4] = { { 9.5, 110, 0, 0 }, { 5, 20, -0.25 / 8, 0 }, { 0.5,
 //float test_scenario[][4] = { { 9.5, 500, 0, 0 }, { 10, -200, -0.25 / 2, 0 } };  // scenariusz ekstremalny
 
 
+/*
+* local car coord space:
+	+x forward
+	+z right
+	+y up
+
+	Pos(t + dt) = Pos(t) + V(t) * dt + A(t) * (dt*dt)/2
+
+	AsixToQuat() - oœ na quaternion
+	AsixAngle() - reprezentacja k¹towo-osiowa quaterniona
+
+	vec_rot(dt) = V_ang(t0) * dt + A_ang(t0) * (dt*dt)/2
+	vec_rot zamieniamy na oœ k¹t obrotu, u¿ywany AsixToQuat() by uzyskaæ quaternion
+	quat_orient(t + dt) = quat_rot(dt) * quat_orient(t)
+*/
+
 #include <windows.h>
 #include <math.h>
 #include <time.h>
@@ -225,10 +241,26 @@ void VirtualWorldCycle()
 	for (map<int, MovableObject*>::iterator it = other_users_vehicles.begin(); it != other_users_vehicles.end(); ++it)
 	{
 		MovableObject *veh = it->second;
+
+		const float dt = fDt;
+
+		veh->state.vV = veh->state.vV + veh->state.vA * dt;
+		veh->state.vPos = veh->state.vPos + veh->state.vV * dt + veh->state.vA * 0.5f * dt * dt;	
+
 		//veh->state.vPos = ...
 		//veh->state.vV = ....
 		//veh->state.qOrient = ....
 		//veh->state.vV_ang = ....
+
+		/*
+				AsixToQuat() - oœ na quaternion
+	AsixAngle() - reprezentacja k¹towo-osiowa quaterniona
+
+	vec_rot(dt) = V_ang(t0) * dt + A_ang(t0) * (dt*dt)/2
+	vec_rot zamieniamy na oœ k¹t obrotu, u¿ywany AsixToQuat() by uzyskaæ quaternion
+	quat_orient(t + dt) = quat_rot(dt) * quat_orient(t)
+		*/
+
 	}
 	//Release the Critical section
 	LeaveCriticalSection(&m_cs);
