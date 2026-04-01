@@ -3,7 +3,7 @@
     The main module
 ****************************************************/
 
-bool if_prediction_test = false;          // simulation independent from user to compare prediction methods
+bool if_prediction_test = true;          // simulation independent from user to compare prediction methods
 bool if_delays = false;                   // network delays simulation
 bool if_shadow = true;                    // network shadow to view what is view by other users
 // Scenariusz testu predykcji - tzw. benchmark - dziêki temu mo¿na porównaæ ró¿ne algorytmy predykcji na tym samym scenariuszu:
@@ -265,16 +265,20 @@ void VirtualWorldCycle()
 	nale¿ albo rozbiæ przyspieszenie na sk³adniki i ka¿dy sk³adnik przemno¿yæ przez odpowiedni mno¿nik, ale zwiêksza to iloœæ informacji wysy³anych, najproœciej usun¹æ sk³adow¹ boczn¹ przyspieszenia (sk³¹dowa lokalnego wektora w prawo) - obliczyæ dot product wektora right z przyspieszeniem i odj¹æ od ogólnego przyspiesznenia
 		*/
 
-		Vector3 rot_in_frame = veh->state.vV_ang * dt + veh->state.vA_ang * accel_component;
+		Vector3 rot_in_frame = veh->state.vA_ang;
 		Vector3 rot_axis = rot_in_frame.znorm();
-		float rot_angle = rot_axis.length();
+		float rot_angle = rot_axis.length() * dt;
 		quaternion rot_in_frame_q = AsixToQuat(rot_axis, rot_angle);
 		quaternion quat_orient_now = rot_in_frame_q * veh->state.qOrient;
 
-		veh->state.qOrient = quat_orient_now;
+		veh->state.qOrient = quat_orient_now.n();
 
 		Vector3 dir_right = veh->state.qOrient.rotate_vector(Vector3(0, 0, 1));
+		Vector3 vV_right = dir_right * (veh->state.vV * dir_right);
+		dir_right.znorm();
+		vV_right.znorm();
 		float RoA = veh->state.vA ^ dir_right;
+		//Vector3 RxA = dir_right * veh->state.vA;
 		Vector3 a = { veh->state.vA.x - RoA, veh->state.vA.x - RoA, veh->state.vA.z - RoA };
 
 		veh->state.vPos = veh->state.vPos + veh->state.vV * dt + a * accel_component;

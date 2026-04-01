@@ -3,3 +3,23 @@ my_vehicle->iID = 488
 poczatek interakcji
 my_vehicle->iID = 41
 Koniec interakcji
+height_map planet_terrain: number_of_rows = 235, number_of_columns = 231
+my_vehicle->iID = 175
+poczatek interakcji
+my_vehicle->iID = 41
+Koniec interakcji
+height_map planet_terrain: number_of_rows = 235, number_of_columns = 231
+my_vehicle->iID = 786
+poczatek interakcji
+my_vehicle->iID = 41
+Koniec interakcji
+height_map planet_terrain: number_of_rows = 235, number_of_columns = 231
+my_vehicle->iID = 106
+poczatek interakcji
+my_vehicle->iID = 41
+Koniec interakcji
+height_map planet_terrain: number_of_rows = 235, number_of_columns = 231
+my_vehicle->iID = 308
+poczatek interakcji
+my_vehicle->iID = 41
+Koniec interakcji
