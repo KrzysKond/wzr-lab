@@ -1,10 +1,11 @@
 /*********************************************************************************
 	Operacje na __vectorach 3- wymiarowych + kilka przydatnych funkcji graficznych
 	**********************************************************************************/
+#define __VECTOR3D_CPP_
 #include <math.h>
 #include "vector3D.h"
 
-float pii = 3.14159265358979;
+float pii = 3.1415926535898;
 
 Vector3::Vector3(float x, float y, float z)
 {
@@ -31,7 +32,6 @@ Vector3 Vector3::operator/ (float constant_value)			// operator* is used to scal
 	if (constant_value != 0)
 		return Vector3(x / constant_value, y / constant_value, z / constant_value);
 	else return Vector3(x, y, z);
-
 }
 
 Vector3 Vector3::operator+ (float constant_value)  // dodanie vec+vec
@@ -96,9 +96,9 @@ bool Vector3::operator==(Vector3 v2)
 	return (x == v2.x) && (y == v2.y) && (z == v2.z);
 }
 
-Vector3 Vector3::rotation(float steering_angle, float vn0, float vn1, float vn2)
+Vector3 Vector3::rotation(float wheel_angle, float vn0, float vn1, float vn2)
 {
-	float s = sin(steering_angle), c = cos(steering_angle);
+	float s = sin(wheel_angle), c = cos(wheel_angle);
 
 	Vector3 w;
 	w.x = x*(vn0*vn0 + c*(1 - vn0*vn0)) + y*(vn0*vn1*(1 - c) - s*vn2) + z*(vn0*vn2*(1 - c) + s*vn1);
@@ -150,7 +150,7 @@ float angle_between_vectors2D(Vector3 Wa, Vector3 Wb)
 {
 
 	Vector3 vector_prod = Wa.znorm2D() * Wb.znorm2D();  // iloczyn __vectorowy __vectorow o jednostkowej lengthi
-	float sin_angle = vector_prod.z;        // problem w tym, ze sin(steering_angle) == sin(pi-steering_angle)   
+	float sin_angle = vector_prod.z;        // problem w tym, ze sin(wheel_angle) == sin(pi-wheel_angle)   
 	if (sin_angle == 0)
 	{
 		if (Wa.znorm2D() == Wb.znorm2D()) return 0;
@@ -167,6 +167,29 @@ float angle_between_vectors2D(Vector3 Wa, Vector3 Wb)
 
 	return angle;
 }
+
+float angle_between_vectors(Vector3 Wa, Vector3 Wb)
+{
+
+	Vector3 vector_prod = Wa.znorm() * Wb.znorm();  // iloczyn __vectorowy __vectorow o jednostkowej lengthi
+	float sin_angle = vector_prod.length();        // problem w tym, ze sin(wheel_angle) == sin(pi-wheel_angle)   
+	if (sin_angle == 0)
+	{
+		if (Wa.znorm() == Wb.znorm()) return 0;
+		if (Wa.znorm() == -Wb.znorm()) return pii;
+	}
+	// dlatego trzeba  jeszcze sprawdzic czy to kat rozwarty
+	Vector3 wso_n = Wa.znorm() + Wb.znorm();
+	Vector3 vector_prod_1 = wso_n.znorm() * Wb.znorm();
+	bool obtuse_angle = (vector_prod_1.length() > sqrt(2.0) / 2);
+
+	float angle = asin(fabs(sin_angle));
+	if (obtuse_angle) angle = pii - angle;
+	if (sin_angle < 0) angle = 2 * pii - angle;
+
+	return angle;
+}
+
 
 /*
    wyznaczanie punktu przeciecia sie 2 odcinkow AB i CD lub ich przedluzen

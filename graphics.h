@@ -12,7 +12,7 @@ enum GLDisplayListNames
 	Floor = 3,
 	Cube = 4,
 	Auto = 5,
-	EnvironmentMap = 10
+	TerrainMap = 10
 
 };
 
@@ -34,6 +34,7 @@ struct ViewParams
 	float cam_distance_1, cam_angle_1, cam_distance_2, cam_angle_2,
 		cam_distance_3, cam_angle_3;
 	float zoom;
+	bool network_shadow_view;
 };
 
 int GraphicsInitialisation(HDC g_context);
@@ -45,3 +46,18 @@ BOOL SetWindowPixelFormat(HDC hDC);
 BOOL CreateViewGLContext(HDC hDC);
 GLvoid BuildFont(HDC hDC);
 GLvoid glPrint(const char *fmt, ...);
+
+typedef struct {
+	int width;
+	int height;
+	char biCount;
+	unsigned char *data;
+} textureImage;
+
+extern unsigned int base;
+
+int loadBMP(char *filename, textureImage *texture);
+int loadBBMP(char *filename, textureImage *texture);
+
+unsigned int loadTextures(char *filename);
+unsigned int loadBlendTextures(char *filename);

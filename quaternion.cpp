@@ -12,6 +12,7 @@
 	pocz¹tkow¹ np. obiekt skierowany w kierunku osi 0x, z normaln¹ zgodn¹ z 0y. Wówczas
 	quaternion odpowiada obrotowi od po³o¿enia poc¿¹tkowego.
 	****************************************************************************************************/
+#define __QUATERNION_CPP_
 #include <stdlib.h>
 #include "quaternion.h"
 
@@ -19,7 +20,6 @@
 quaternion::quaternion(float x, float y, float z, float w)
 
 {
-
 	this->x = x;
 	this->y = y;
 	this->z = z;

@@ -1,7 +1,16 @@
 /****************************************************
 	Virtual Collaborative Teams - The base program 
     The main module
-	****************************************************/
+****************************************************/
+
+bool if_prediction_test = false;          // simulation independent from user to compare prediction methods
+bool if_delays = false;                   // network delays simulation
+bool if_shadow = true;                    // network shadow to view what is view by other users
+// Scenariusz testu predykcji - tzw. benchmark - dziêki temu mo¿na porównaæ ró¿ne algorytmy predykcji na tym samym scenariuszu:
+// {czas [s], si³a [N], prêdkoœæ skrêcania kó³ [rad/s], stopieñ hamowania} -> przez jaki czas obiekt ma sie poruszaæ z podan¹ prêdkoœci¹ i k¹tem skrêtu kó³
+float test_scenario[][4] = { { 9.5, 110, 0, 0 }, { 5, 20, -0.25 / 8, 0 }, { 0.5, 0, 0, 1.0 }, { 5, 60, 0.25 / 8, 0 }, { 15, 100, 0, 0 } };
+//float test_scenario[][4] = { { 9.5, 500, 0, 0 }, { 10, -200, -0.25 / 2, 0 } };  // scenariusz ekstremalny
+
 
 #include <windows.h>
 #include <math.h>
@@ -10,43 +19,47 @@
 #include <gl\glu.h>
 #include <iterator> 
 #include <map>
-#include <assert.h>
 
 #include "objects.h"
 #include "graphics.h"
 #include "net.h"
-#include <ostream>
 using namespace std;
 
+FILE *f = fopen("wzr_log_file.txt", "a"); // plik do zapisu informacji testowych
 
-FILE *f = fopen("wlog.txt", "w"); // plik do zapisu informacji testowych
+
+MovableObject *my_vehicle;               // obiekt przypisany do tej aplikacji
+Terrain planet_terrain;
 
 
-MovableObject *my_car;               // obiekt przypisany do tej aplikacji
-Environment env;
+map<int, MovableObject*> other_users_vehicles;
 
-map<int, MovableObject*> other_cars;
+float fDt;                            // sredni czas pomiedzy dwoma kolejnymi cyklami symulacji i wyswietlania
+long time_of_cycle, number_of_cyc=0;   // zmienne pomocnicze potrzebne do obliczania fDt
+long time_start = clock();           // moment uruchomienia aplikacji 
+long time_last_send = 0;             // moment wys³ania ostatniej ramki  
 
-float avg_cycle_time;                // sredni czas pomiedzy dwoma kolejnymi cyklami symulacji i wyswietlania
-long time_of_cycle, number_of_cyc;   // zmienne pomocnicze potrzebne do obliczania avg_cycle_time
-long time_start = clock();
-
-unicast_net* uni_send{ nullptr };
-unicast_net* uni_receive{ nullptr };
-unsigned long server_ip{ 0 };
+multicast_net *multi_reciv;          // wsk do obiektu zajmujacego sie odbiorem komunikatow
+multicast_net *multi_send;           //   -||-  wysylaniem komunikatow
 
 HANDLE threadReciv;                  // uchwyt w¹tku odbioru komunikatów
-HWND main_window;                    // uchwyt do g³ównego okna programu 
+HWND window_handle;                    // uchwyt do g³ównego okna programu 
 CRITICAL_SECTION m_cs;               // do synchronizacji w¹tków
 
 bool if_SHIFT_pressed = false;
 bool if_ID_visible = true;           // czy rysowac nr ID przy ka¿dym obiekcie
 bool if_mouse_control = false;       // sterowanie za pomoc¹ klawisza myszki
 int mouse_cursor_x = 0, mouse_cursor_y = 0;     // po³o¿enie kursora myszy
-bool received{ false };
-extern ViewParams viewpar;           // ustawienia widoku zdefiniowane w grafice
 
-long duration_of_day = 600;         // czas trwania dnia w [s]
+extern ViewParams view_parameters;           // ustawienia widoku zdefiniowane w grafice
+
+long time_day = 1600;         // czas trwania dnia w [s]
+
+// zmienne zwi¹zane z nawigacj¹ obliczeniow¹:
+long number_of_send_trials = 0;        // liczba prób wysylania ramki ze stanem  
+float sum_differences_of_pos = 0;             // sumaryczna odleg³oœæ pomiêdzy po³o¿eniem rzeczywistym (symulowanym) a ekstrapolowanym
+float sum_of_angle_differences = 0;             // sumaryczna ró¿nica k¹towa -||- 
+
 
 struct Frame                                      // g³ówna struktura s³u¿¹ca do przesy³ania informacji
 {	
@@ -56,6 +69,7 @@ struct Frame                                      // g³ówna struktura s³u¿¹ca do
 
 	long sending_time;                            // tzw. znacznik czasu potrzebny np. do obliczenia opóŸnienia
 	int iID_receiver;                             // nr ID odbiorcy wiadomoœci, jeœli skierowana jest tylko do niego
+	int ID_team;
 };
 
 
@@ -64,48 +78,36 @@ struct Frame                                      // g³ówna struktura s³u¿¹ca do
 // UWAGA!  Odbierane s¹ te¿ komunikaty z w³asnej aplikacji by porównaæ obraz ekstrapolowany do rzeczywistego.
 DWORD WINAPI ReceiveThreadFun(void *ptr)
 {
-	unicast_net *pmt_net = (unicast_net*)ptr;  // wskaŸnik do obiektu klasy unicast_net
+	multicast_net *pmt_net = (multicast_net*)ptr;  // wskaŸnik do obiektu klasy multicast_net
 	Frame frame;
-	frame.state = my_car->State();
-	frame.iID = my_car->iID;
-
-	assert(server_ip);
-
-	//uni_send->send((char*)&frame, server_ip, sizeof(Frame));
 
 	while (1)
 	{
-		unsigned long sent_from_ip{ 0 };
-		int frame_size = pmt_net->reciv((char*)&frame, &sent_from_ip, sizeof(Frame));   // oczekiwanie na nadejœcie ramki 
-		
-		received = true;
-		if (frame.iID == my_car->iID) continue;
-
+		int frame_size = pmt_net->reciv((char*)&frame, sizeof(Frame));   // oczekiwanie na nadejœcie ramki 
 		ObjectState state = frame.state;
 
-		//fprintf(f, "odebrano stan iID = %d, ID dla mojego obiektu = %d\n", frame.iID, my_car->iID);
+		//fprintf(f, "odebrano stan iID = %d, ID dla mojego obiektu = %d\n", frame.iID, my_vehicle->iID);
 
 		// Lock the Critical section
-		EnterCriticalSection(&m_cs);               // wejœcie na œcie¿kê krytyczn¹ - by inne w¹tki (np. g³ówny) nie wspó³dzieli³ 
-		//OutputDebugString("EnterCriticalSection");
-	                                               // tablicy other_cars
-		if (frame.iID != my_car->iID)          // jeœli to nie mój w³asny obiekt
+		EnterCriticalSection(&m_cs);                                     // wejœcie na œcie¿kê krytyczn¹ - by inne w¹tki (np. g³ówny) nie wspó³dzieli³ 
+	                                                                     // tablicy other_users_vehicles
+
+		if ((if_shadow) || (frame.iID != my_vehicle->iID))               // jeœli to nie mój w³asny obiekt
 		{
 			
-			if ((other_cars.size() == 0) || (other_cars[frame.iID] == NULL))        // nie ma jeszcze takiego obiektu w tablicy -> trzeba go
+			if ((other_users_vehicles.size() == 0) || (other_users_vehicles[frame.iID] == NULL))        // nie ma jeszcze takiego obiektu w tablicy -> trzeba go
 				// stworzyæ
 			{
 				MovableObject *ob = new MovableObject();
 				ob->iID = frame.iID;
-				other_cars[frame.iID] = ob;		
+				other_users_vehicles[frame.iID] = ob;		
 				//fprintf(f, "zarejestrowano %d obcy obiekt o ID = %d\n", iLiczbaCudzychOb - 1, CudzeObiekty[iLiczbaCudzychOb]->iID);
-				OutputDebugString("Zarejestrowano obcy obiekt");
 			}
-			other_cars[frame.iID]->ChangeState(state);   // aktualizacja stateu obiektu obcego 	
+			other_users_vehicles[frame.iID]->StateUpdate(state);             // aktualizacja stateu obiektu obcego 	
 			
 		}	
 		//Release the Critical section
-		LeaveCriticalSection(&m_cs);               // wyjœcie ze œcie¿ki krytycznej
+		LeaveCriticalSection(&m_cs);                                     // wyjœcie ze œcie¿ki krytycznej
 	}  // while(1)
 	return 1;
 }
@@ -117,17 +119,13 @@ void InteractionInitialisation()
 {
 	DWORD dwThreadId;
 
-	my_car = new MovableObject();    // tworzenie wlasnego obiektu
-	OutputDebugString("Zarejestrowano my_Car");
+	my_vehicle = new MovableObject();    // tworzenie wlasnego obiektu
 
 	time_of_cycle = clock();             // pomiar aktualnego czasu
 
 	// obiekty sieciowe typu multicast (z podaniem adresu WZR oraz numeru portu)
-	//multi_reciv = new multicast_net("224.12.12.130", 10001);      // obiekt do odbioru ramek sieciowych
-	//multi_send = new multicast_net("224.12.12.130", 10001);       // obiekt do wysy³ania ramek
-	uni_send = new unicast_net(7573);
-	uni_receive = new unicast_net(7574);
-	server_ip = inet_addr("127.0.0.1"); // TODO: get real ip from ipconfig
+	multi_reciv = new multicast_net("224.12.15.148", 10001);      // obiekt do odbioru ramek sieciowych
+	multi_send = new multicast_net("224.12.15.148", 10001);       // obiekt do wysy³ania ramek
 
 
 	// uruchomienie w¹tku obs³uguj¹cego odbiór komunikatów:
@@ -135,26 +133,14 @@ void InteractionInitialisation()
 		NULL,                        // no security attributes
 		0,                           // use default stack size
 		ReceiveThreadFun,                // thread function
-		(void *)uni_receive,               // argument to thread function
+		(void *)multi_reciv,               // argument to thread function
 		NULL,                        // use default creation flags
 		&dwThreadId);                // returns the thread identifier
 	SetThreadPriority(threadReciv, THREAD_PRIORITY_HIGHEST);
 
 
-	int wait_ms = 0;
-	while (!received && wait_ms < 2000)
-	{
-		Sleep(100);
-		wait_ms += 100;
-	}
-	EnterCriticalSection(&m_cs);
-	if (!other_cars.empty())
-	{
-		my_car->FindPosition(other_cars);
-	}
-	LeaveCriticalSection(&m_cs);
 
-	printf("start interakcji\n");
+	fprintf(f,"poczatek interakcji\n");
 }
 
 
@@ -164,27 +150,88 @@ void InteractionInitialisation()
 void VirtualWorldCycle()
 {
 	number_of_cyc++;
+	float time_from_start_in_s = (float)(clock() - time_start) / CLOCKS_PER_SEC;  // czas w sek. jaki up³yn¹³ od uruchomienia programu
 
 	if (number_of_cyc % 50 == 0)          // jeœli licznik cykli przekroczy³ pewn¹ wartoœæ, to
-	{                              // nale¿y na nowo obliczyæ œredni czas cyklu avg_cycle_time
+	{                              // nale¿y na nowo obliczyæ œredni czas cyklu fDt
 		char text[256];
 		long prev_time = time_of_cycle;
 		time_of_cycle = clock();
 		float fFps = (50 * CLOCKS_PER_SEC) / (float)(time_of_cycle - prev_time);
-		if (fFps != 0) avg_cycle_time = 1.0 / fFps; else avg_cycle_time = 1;
+		if (fFps != 0) fDt = 1.0 / fFps; else fDt = 1;
+	
+		sprintf(text, "WZR-2025/26, tem.3, wer.h (jak Hubert), czêstoœæ pr.wys. = %0.2f[r/s]  œr.odl = %0.3f[m]  œr.ro¿n.k¹t. = %0.3f[st]",
+			(float)number_of_send_trials / time_from_start_in_s, sum_differences_of_pos / number_of_cyc, 
+			sum_of_angle_differences / number_of_cyc*180.0 / 3.14159);
 
-		sprintf(text, "WZR-lab lato 2025/26 temat 1, wersja h (%0.0f fps  %0.2fms) ", fFps, 1000.0 / fFps);
-
-		SetWindowText(main_window, text); // wyœwietlenie aktualnej iloœci klatek/s w pasku okna			
+		if (time_from_start_in_s > 5)
+			SetWindowText(window_handle, text); // wyœwietlenie aktualnych odchy³ek						
 	}
 
-	my_car->Simulation(avg_cycle_time);                    // symulacja w³asnego obiektu
+	// obliczenie œredniej odleg³oœci i œredniej ró¿nicy k¹towej pomiêdzy pojazdem a cieniem:
+	EnterCriticalSection(&m_cs);
+	MovableObject *car = (other_users_vehicles.size() > 0 ? other_users_vehicles[my_vehicle->iID] : NULL);       
+	if (car != NULL)
+	{
+		sum_differences_of_pos += DistanceBetweenPointsOnTetraMap(my_vehicle->state.vPos, car->state.vPos);
+		sum_of_angle_differences += AngleBetweenQuats(my_vehicle->state.qOrient, car->state.qOrient);
+	}
+	else {
+		sum_differences_of_pos += DistanceBetweenPointsOnTetraMap(my_vehicle->state.vPos, Vector3(0,0,0));  
+		sum_of_angle_differences += AngleBetweenQuats(my_vehicle->state.qOrient, quaternion(0, 0, 0, 1));
+	}
+	LeaveCriticalSection(&m_cs);
+	
+	// test predykcji:
+	if (if_prediction_test)
+	{
+		int number_of_actions = sizeof(test_scenario) / (4 * sizeof(float));
+		bool test_finished = test_scenario_step(my_vehicle, test_scenario, number_of_actions, time_from_start_in_s);
 
-	Frame frame;
-	frame.state = my_car->State();               // state w³asnego obiektu 
-	frame.iID = my_car->iID;
+		if (test_finished) // czas dobiegl konca -> koniec testu 
+		{
+			if_prediction_test = false;
+			char text[200];
+			sprintf(text, "Po czasie %3.2f[s]  œr.czêstoœæ = %0.2f[r/s]  œr.odl = %0.3f[m]  œr.ró¿n.k¹t. = %0.3f[st]",
+				time_from_start_in_s, (float)number_of_send_trials / time_from_start_in_s, 
+				sum_differences_of_pos / number_of_cyc, sum_of_angle_differences / number_of_cyc*180.0 / 3.14159);
+			fprintf(f, "%s\n", text);
+			MessageBox(window_handle, text, "Test predykcji", MB_OK);
+		}
+	}
 
-	uni_send->send((char*)&frame, server_ip, sizeof(Frame));
+	my_vehicle->Simulation(fDt);                    // symulacja w³asnego obiektu
+
+	time_from_start_in_s = (float)(clock() - time_start) / CLOCKS_PER_SEC;
+	
+	//if ((float)(clock() - time_last_send) / CLOCKS_PER_SEC >= 0.2 + 30 * (time_from_start_in_s < 30))
+	if ((float)(clock() - time_last_send) / CLOCKS_PER_SEC >= 1.0)
+	{
+		Frame frame;
+		frame.state = my_vehicle->State();                   // stan w³asnego obiektu 
+		frame.iID = my_vehicle->iID;
+		multi_send->send((char*)&frame, sizeof(Frame));  // wys³anie komunikatu do pozosta³ych aplikacji co pewien czas
+		time_last_send = clock();
+		number_of_send_trials++;
+	}
+
+	// ---------------------------------------------------------------
+	// ---------------------------------------------------------------
+	// ---------------------------------------------------------------
+	// ------------  Miejsce na predykcjê stanu:  --------------------
+	// ------------  The place for state prediction:  ----------------
+	// Lock the Critical section
+	EnterCriticalSection(&m_cs);
+	for (map<int, MovableObject*>::iterator it = other_users_vehicles.begin(); it != other_users_vehicles.end(); ++it)
+	{
+		MovableObject *veh = it->second;
+		//veh->state.vPos = ...
+		//veh->state.vV = ....
+		//veh->state.qOrient = ....
+		//veh->state.vV_ang = ....
+	}
+	//Release the Critical section
+	LeaveCriticalSection(&m_cs);
 }
 
 // *****************************************************************
@@ -235,15 +282,13 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	//teraz rejestrujemy klasê okna g³ównego
 	RegisterClass(&main_class);
 
-	main_window = CreateWindow(class_name, "WZR-lab lato 2025/26 temat 1 - wersja h", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-		100, 50, 950, 650, NULL, NULL, hInstance, NULL);
+	window_handle = CreateWindow(class_name, "WZR-lab 2025/26 temat 3 - Nawigacja obliczeniowa - wersja h (jak Hubert)", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+		20, 10, 900, 750, NULL, NULL, hInstance, NULL);
 
-	
-
-	ShowWindow(main_window, nCmdShow);
+	ShowWindow(window_handle, nCmdShow);
 
 	//odswiezamy zawartosc okna
-	UpdateWindow(main_window);
+	UpdateWindow(window_handle);
 
 	// pobranie komunikatu z kolejki jeœli funkcja PeekMessage zwraca wartoœæ inn¹ ni¿ FALSE,
 	// w przeciwnym wypadku symulacja wirtualnego œwiata wraz z wizualizacj¹
@@ -258,7 +303,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		else
 		{
 			VirtualWorldCycle();    // Cykl wirtualnego œwiata
-			InvalidateRect(main_window, NULL, FALSE);
+			InvalidateRect(window_handle, NULL, FALSE);
 		}
 	}
 
@@ -267,7 +312,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 /********************************************************************
 FUNKCJA OKNA realizujaca przetwarzanie meldunków kierowanych do okna aplikacji*/
-LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WndProc(HWND window_handle, UINT message_code, WPARAM wParam, LPARAM lParam)
 {
 
 	switch (message_code)
@@ -275,19 +320,21 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 	case WM_CREATE:  //message wysy³any w momencie tworzenia okna
 	{
 
-		g_context = GetDC(main_window);
+		g_context = GetDC(window_handle);
 
 		srand((unsigned)time(NULL));
 		int result = GraphicsInitialisation(g_context);
 		if (result == 0)
 		{
-			printf("nie udalo sie otworzyc okna graficznego\n");
+			printf("graphics window failed to be open\n");
 			//exit(1);
 		}
 
 		InteractionInitialisation();
 
-		SetTimer(main_window, 1, 10, NULL);
+		SetTimer(window_handle, 1, 10, NULL);
+
+		time_start = clock();      // by czas liczyæ po utworzeniu okna i inicjalizacji 
 
 		return 0;
 	}
@@ -297,12 +344,12 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 	{
 		PAINTSTRUCT paint;
 		HDC context;
-		context = BeginPaint(main_window, &paint);
+		context = BeginPaint(window_handle, &paint);
 
 		DrawScene();
 		SwapBuffers(context);
 
-		EndPaint(main_window, &paint);
+		EndPaint(window_handle, &paint);
 
 		return 0;
 	}
@@ -326,8 +373,8 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 		EndOfInteraction();
 		EndOfGraphics();
 
-		ReleaseDC(main_window, g_context);
-		KillTimer(main_window, 1);
+		ReleaseDC(window_handle, g_context);
+		KillTimer(window_handle, 1);
 
 		//LPDWORD lpExitCode;
 		DWORD ExitCode;
@@ -337,7 +384,7 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 
 		//Sleep(1000);
 
-		other_cars.clear();
+		other_users_vehicles.clear();
 		
 
 		PostQuitMessage(0);
@@ -348,7 +395,7 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
 		if (if_mouse_control)
-			my_car->F = 50.0;        // si³a pchaj¹ca do przodu
+			my_vehicle->F = 45.0;        // si³a pchaj¹ca do przodu
 		break;
 	}
 	case WM_RBUTTONDOWN: //reakcja na prawy przycisk myszki
@@ -356,14 +403,14 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
 		if (if_mouse_control)
-			my_car->F = -5.0;        // si³a pchaj¹ca do tylu
+			my_vehicle->F = -30.0;        // si³a pchaj¹ca do tylu
 		break;
 	}
 	case WM_MBUTTONDOWN: //reakcja na œrodkowy przycisk myszki : uaktywnienie/dezaktywacja sterwania myszkowego
 	{
 		if_mouse_control = 1 - if_mouse_control;
-		if (if_mouse_control) my_car->if_keep_steer_wheel = true;
-		else my_car->if_keep_steer_wheel = false;
+		if (if_mouse_control) my_vehicle->if_keep_steer_wheel = true;
+		else my_vehicle->if_keep_steer_wheel = false;
 
 		mouse_cursor_x = LOWORD(lParam);
 		mouse_cursor_y = HIWORD(lParam);
@@ -372,13 +419,13 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 	case WM_LBUTTONUP: //reakcja na puszczenie lewego przycisku myszki
 	{
 		if (if_mouse_control)
-			my_car->F = 0.0;        // si³a pchaj¹ca do przodu
+			my_vehicle->F = 0.0;        // si³a pchaj¹ca do przodu
 		break;
 	}
 	case WM_RBUTTONUP: //reakcja na puszczenie lewy przycisk myszki
 	{
 		if (if_mouse_control)
-			my_car->F = 0.0;        // si³a pchaj¹ca do przodu
+			my_vehicle->F = 0.0;        // si³a pchaj¹ca do przodu
 		break;
 	}
 	case WM_MOUSEMOVE:
@@ -387,11 +434,11 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 		int y = HIWORD(lParam);
 		if (if_mouse_control)
 		{
-			float wheel_angle = (float)(mouse_cursor_x - x) / 20;
-			if (wheel_angle > 60) wheel_angle = 60;
-			if (wheel_angle < -60) wheel_angle = -60;
-			my_car->state.steering_angle = PI*wheel_angle / 180;
-			//my_car->steer_wheel_speed = (float)(mouse_cursor_x - x) / 20;
+			float wheel_angle = (float)(mouse_cursor_x - x) / 200;
+			if (wheel_angle > my_vehicle->wheel_angle_max) wheel_angle = my_vehicle->wheel_angle_max;
+			if (wheel_angle < -my_vehicle->wheel_angle_max) wheel_angle = -my_vehicle->wheel_angle_max;
+			my_vehicle->state.wheel_angle = wheel_angle;
+			//my_vehicle->turning_speed = (float)(mouse_cursor_x - x) / 20;
 		}
 		break;
 	}
@@ -407,41 +454,41 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 		}
 		case VK_SPACE:
 		{
-			my_car->breaking_factor = 1.0;       // stopieñ hamowania (reszta zale¿y od si³y docisku i wsp. tarcia)
+			my_vehicle->breaking_factor = 1.0;       // stopieñ hamowania (reszta zale¿y od si³y docisku i wsp. tarcia)
 			break;                       // 1.0 to maksymalny stopieñ (np. zablokowanie kó³)
 		}
 		case VK_UP:
 		{
-			my_car->F = 100.0;        // si³a pchaj¹ca do przodu
+			my_vehicle->F = 140.0;        // si³a pchaj¹ca do przodu
 			break;
 		}
 		case VK_DOWN:
 		{
-			my_car->F = -70.0;
+			my_vehicle->F = -70.0;
 			break;
 		}
 		case VK_LEFT:
 		{
-			if (my_car->steer_wheel_speed < 0){
-				my_car->steer_wheel_speed = 0;
-				my_car->if_keep_steer_wheel = true;
+			if (my_vehicle->turning_speed < 0){
+				my_vehicle->turning_speed = 0;
+				my_vehicle->if_keep_steer_wheel = true;
 			}
 			else{
-				if (if_SHIFT_pressed) my_car->steer_wheel_speed = 0.5;
-				else my_car->steer_wheel_speed = 0.25 / 8;
+				if (if_SHIFT_pressed) my_vehicle->turning_speed = 0.5;
+				else my_vehicle->turning_speed = 0.25 / 8;
 			}
 
 			break;
 		}
 		case VK_RIGHT:
 		{
-			if (my_car->steer_wheel_speed > 0){
-				my_car->steer_wheel_speed = 0;
-				my_car->if_keep_steer_wheel = true;
+			if (my_vehicle->turning_speed > 0){
+				my_vehicle->turning_speed = 0;
+				my_vehicle->if_keep_steer_wheel = true;
 			}
 			else{
-				if (if_SHIFT_pressed) my_car->steer_wheel_speed = -0.5;
-				else my_car->steer_wheel_speed = -0.25 / 8;
+				if (if_SHIFT_pressed) my_vehicle->turning_speed = -0.5;
+				else my_vehicle->turning_speed = -0.25 / 8;
 			}
 			break;
 		}
@@ -453,77 +500,82 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 		case 'W':   // cam_distance widoku
 		{
 			//cam_pos = cam_pos - cam_direct*0.3;
-			if (viewpar.cam_distance > 0.5) viewpar.cam_distance /= 1.2;
-			else viewpar.cam_distance = 0;
+			if (view_parameters.cam_distance > 0.5) view_parameters.cam_distance /= 1.2;
+			else view_parameters.cam_distance = 0;
 			break;
 		}
 		case 'S':   // przybli¿enie widoku
 		{
 			//cam_pos = cam_pos + cam_direct*0.3; 
-			if (viewpar.cam_distance > 0) viewpar.cam_distance *= 1.2;
-			else viewpar.cam_distance = 0.5;
+			if (view_parameters.cam_distance > 0) view_parameters.cam_distance *= 1.2;
+			else view_parameters.cam_distance = 0.5;
 			break;
 		}
 		case 'Q':   // widok z góry
 		{
-			if (viewpar.tracking) break;
-			viewpar.top_view = 1 - viewpar.top_view;
-			if (viewpar.top_view)
+			if (view_parameters.tracking) break;
+			view_parameters.top_view = 1 - view_parameters.top_view;
+			if (view_parameters.top_view)
 			{
-				viewpar.cam_pos_1 = viewpar.cam_pos; viewpar.cam_direct_1 = viewpar.cam_direct; viewpar.cam_vertical_1 = viewpar.cam_vertical;
-				viewpar.cam_distance_1 = viewpar.cam_distance; viewpar.cam_angle_1 = viewpar.cam_angle;
-				viewpar.cam_pos = viewpar.cam_pos_2; viewpar.cam_direct = viewpar.cam_direct_2; viewpar.cam_vertical = viewpar.cam_vertical_2;
-				viewpar.cam_distance = viewpar.cam_distance_2; viewpar.cam_angle = viewpar.cam_angle_2;
+				view_parameters.cam_pos_1 = view_parameters.cam_pos; view_parameters.cam_direct_1 = view_parameters.cam_direct; view_parameters.cam_vertical_1 = view_parameters.cam_vertical;
+				view_parameters.cam_distance_1 = view_parameters.cam_distance; view_parameters.cam_angle_1 = view_parameters.cam_angle;
+				view_parameters.cam_pos = view_parameters.cam_pos_2; view_parameters.cam_direct = view_parameters.cam_direct_2; view_parameters.cam_vertical = view_parameters.cam_vertical_2;
+				view_parameters.cam_distance = view_parameters.cam_distance_2; view_parameters.cam_angle = view_parameters.cam_angle_2;
 			}
 			else
 			{
-				viewpar.cam_pos_2 = viewpar.cam_pos; viewpar.cam_direct_2 = viewpar.cam_direct; viewpar.cam_vertical_2 = viewpar.cam_vertical;
-				viewpar.cam_distance_2 = viewpar.cam_distance; viewpar.cam_angle_2 = viewpar.cam_angle;
-				viewpar.cam_pos = viewpar.cam_pos_1; viewpar.cam_direct = viewpar.cam_direct_1; viewpar.cam_vertical = viewpar.cam_vertical_1;
-				viewpar.cam_distance = viewpar.cam_distance_1; viewpar.cam_angle = viewpar.cam_angle_1;
+				view_parameters.cam_pos_2 = view_parameters.cam_pos; view_parameters.cam_direct_2 = view_parameters.cam_direct; view_parameters.cam_vertical_2 = view_parameters.cam_vertical;
+				view_parameters.cam_distance_2 = view_parameters.cam_distance; view_parameters.cam_angle_2 = view_parameters.cam_angle;
+				view_parameters.cam_pos = view_parameters.cam_pos_1; view_parameters.cam_direct = view_parameters.cam_direct_1; view_parameters.cam_vertical = view_parameters.cam_vertical_1;
+				view_parameters.cam_distance = view_parameters.cam_distance_1; view_parameters.cam_angle = view_parameters.cam_angle_1;
 			}
 			break;
 		}
 		case 'E':   // obrót kamery ku górze (wzglêdem lokalnej osi z)
 		{
-			viewpar.cam_angle += PI * 5 / 180;
+			view_parameters.cam_angle += PI * 5 / 180;
 			break;
 		}
 		case 'D':   // obrót kamery ku do³owi (wzglêdem lokalnej osi z)
 		{
-			viewpar.cam_angle -= PI * 5 / 180;
+			view_parameters.cam_angle -= PI * 5 / 180;
 			break;
 		}
 		case 'A':   // w³¹czanie, wy³¹czanie trybu œledzenia obiektu
 		{
-			viewpar.tracking = 1 - viewpar.tracking;
-			if (viewpar.tracking)
+			view_parameters.tracking = 1 - view_parameters.tracking;
+			if (view_parameters.tracking)
 			{
-				viewpar.cam_distance = viewpar.cam_distance_3; viewpar.cam_angle = viewpar.cam_angle_3;
+				view_parameters.cam_distance = view_parameters.cam_distance_3; view_parameters.cam_angle = view_parameters.cam_angle_3;
 			}
 			else
 			{
-				viewpar.cam_distance_3 = viewpar.cam_distance; viewpar.cam_angle_3 = viewpar.cam_angle;
-				viewpar.top_view = 0;
-				viewpar.cam_pos = viewpar.cam_pos_1; viewpar.cam_direct = viewpar.cam_direct_1; viewpar.cam_vertical = viewpar.cam_vertical_1;
-				viewpar.cam_distance = viewpar.cam_distance_1; viewpar.cam_angle = viewpar.cam_angle_1;
+				view_parameters.cam_distance_3 = view_parameters.cam_distance; view_parameters.cam_angle_3 = view_parameters.cam_angle;
+				view_parameters.top_view = 0;
+				view_parameters.cam_pos = view_parameters.cam_pos_1; view_parameters.cam_direct = view_parameters.cam_direct_1; view_parameters.cam_vertical = view_parameters.cam_vertical_1;
+				view_parameters.cam_distance = view_parameters.cam_distance_1; view_parameters.cam_angle = view_parameters.cam_angle_1;
 			}
 			break;
 		}
 		case 'Z':   // zoom - zmniejszenie k¹ta widzenia
 		{
-			viewpar.zoom /= 1.1;
+			view_parameters.zoom /= 1.1;
 			RECT rc;
-			GetClientRect(main_window, &rc);
+			GetClientRect(window_handle, &rc);
 			WindowResize(rc.right - rc.left, rc.bottom - rc.top);
 			break;
 		}
 		case 'X':   // zoom - zwiêkszenie k¹ta widzenia
 		{
-			viewpar.zoom *= 1.1;
+			view_parameters.zoom *= 1.1;
 			RECT rc;
-			GetClientRect(main_window, &rc);
+			GetClientRect(window_handle, &rc);
 			WindowResize(rc.right - rc.left, rc.bottom - rc.top);
+			break;
+		}
+		case 'C':         // prze³¹cznie widoku z kokpitu pojazdu u¿ytkownka i jego cienia sieciowego
+		{
+			view_parameters.network_shadow_view = 1 - view_parameters.network_shadow_view;
 			break;
 		}
 		case VK_F1:  // wywolanie systemu pomocy
@@ -553,7 +605,7 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 		}
 		case VK_ESCAPE:
 		{
-			SendMessage(main_window, WM_DESTROY, 0, 0);
+			SendMessage(window_handle, WM_DESTROY, 0, 0);
 			break;
 		}
 		} // switch po klawiszach
@@ -571,35 +623,35 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 		}
 		case VK_SPACE:
 		{
-			my_car->breaking_factor = 0.0;
+			my_vehicle->breaking_factor = 0.0;
 			break;
 		}
 		case VK_UP:
 		{
-			my_car->F = 0.0;
+			my_vehicle->F = 0.0;
 			break;
 		}
 		case VK_DOWN:
 		{
-			my_car->F = 0.0;
+			my_vehicle->F = 0.0;
 			break;
 		}
 		case VK_LEFT:
 		{
-			my_car->Fb = 0.00;
-			//my_car->state.steering_angle = 0;
-			if (my_car->if_keep_steer_wheel) my_car->steer_wheel_speed = -0.25/8;
-			else my_car->steer_wheel_speed = 0; 
-			my_car->if_keep_steer_wheel = false;
+			my_vehicle->Fb = 0.00;
+			//my_vehicle->state.wheel_angle = 0;
+			if (my_vehicle->if_keep_steer_wheel) my_vehicle->turning_speed = -0.25/8;
+			else my_vehicle->turning_speed = 0; 
+			my_vehicle->if_keep_steer_wheel = false;
 			break;
 		}
 		case VK_RIGHT:
 		{
-			my_car->Fb = 0.00;
-			//my_car->state.steering_angle = 0;
-			if (my_car->if_keep_steer_wheel) my_car->steer_wheel_speed = 0.25 / 8;
-			else my_car->steer_wheel_speed = 0;
-			my_car->if_keep_steer_wheel = false;
+			my_vehicle->Fb = 0.00;
+			//my_vehicle->state.wheel_angle = 0;
+			if (my_vehicle->if_keep_steer_wheel) my_vehicle->turning_speed = 0.25 / 8;
+			else my_vehicle->turning_speed = 0;
+			my_vehicle->if_keep_steer_wheel = false;
 			break;
 		}
 
@@ -609,7 +661,7 @@ LRESULT CALLBACK WndProc(HWND main_window, UINT message_code, WPARAM wParam, LPA
 	}
 
 	default: //statedardowa obs³uga pozosta³ych meldunków
-		return DefWindowProc(main_window, message_code, wParam, lParam);
+		return DefWindowProc(window_handle, message_code, wParam, lParam);
 	}
 
 

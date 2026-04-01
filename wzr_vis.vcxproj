@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -38,7 +38,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <_ProjectFileVersion>12.0.30501.0</_ProjectFileVersion>
+    <_ProjectFileVersion>16.0.30427.251</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>Debug\</OutDir>
@@ -81,7 +81,8 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <OutputFile>$(OutDir)wzr_vis.exe</OutputFile>
+      <AdditionalOptions>opengl32.lib glu32.lib WSOCK32.LIB MPR.LIB %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>$(OutDir)GK-OpenGL.exe</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -89,22 +90,21 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention />
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalOptions>opengl32.lib glu32.lib WSOCK32.LIB MPR.LIB %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="graphics.cpp" />
-    <ClCompile Include="quaternion.cpp" />
-    <ClCompile Include="objects.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="net.cpp" />
+    <ClCompile Include="objects.cpp" />
+    <ClCompile Include="quaternion.cpp" />
     <ClCompile Include="vector3D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="graphics.h" />
-    <ClInclude Include="quaternion.h" />
-    <ClInclude Include="objects.h" />
     <ClInclude Include="net.h" />
+    <ClInclude Include="objects.h" />
+    <ClInclude Include="quaternion.h" />
     <ClInclude Include="vector3D.h" />
   </ItemGroup>
   <ItemGroup>
