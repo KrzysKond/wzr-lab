@@ -243,9 +243,8 @@ void VirtualWorldCycle()
 		MovableObject *veh = it->second;
 
 		const float dt = fDt;
+		const float accel_component = 0.5f * dt * dt;
 
-		veh->state.vV = veh->state.vV + veh->state.vA * dt;
-		veh->state.vPos = veh->state.vPos + veh->state.vV * dt + veh->state.vA * 0.5f * dt * dt;	
 
 		//veh->state.vPos = ...
 		//veh->state.vV = ....
@@ -259,7 +258,26 @@ void VirtualWorldCycle()
 	vec_rot(dt) = V_ang(t0) * dt + A_ang(t0) * (dt*dt)/2
 	vec_rot zamieniamy na oœ k¹t obrotu, u¿ywany AsixToQuat() by uzyskaæ quaternion
 	quat_orient(t + dt) = quat_rot(dt) * quat_orient(t)
+
+	zad 2:
+	w A s¹ wszystkie przyspeiszenia - od sily napedowej, od hamowania i grawitacja, kierowca bedzie sobie trzymal przez jakis czas, tak samo w przypadku hamulca, wiec nasza predykcja dziala, ale tarcie i grawitacja s¹ krótkotrwa³e i du¿e co do wartoœæi, wiêc musimy wzi¹æ pod uwagê to
+
+	nale¿ albo rozbiæ przyspieszenie na sk³adniki i ka¿dy sk³adnik przemno¿yæ przez odpowiedni mno¿nik, ale zwiêksza to iloœæ informacji wysy³anych, najproœciej usun¹æ sk³adow¹ boczn¹ przyspieszenia (sk³¹dowa lokalnego wektora w prawo) - obliczyæ dot product wektora right z przyspieszeniem i odj¹æ od ogólnego przyspiesznenia
 		*/
+
+		Vector3 rot_in_frame = veh->state.vV_ang * dt + veh->state.vA_ang * accel_component;
+		Vector3 rot_axis = rot_in_frame.znorm();
+		float rot_angle = rot_axis.length();
+		quaternion rot_in_frame_q = AsixToQuat(rot_axis, rot_angle);
+		quaternion quat_orient_now = rot_in_frame_q * veh->state.qOrient;
+
+		veh->state.qOrient = quat_orient_now;
+
+		Vector3 dir_right = veh->state.qOrient.rotate_vector(Vector3(0, 0, 1));
+		float RoA = veh->state.vA ^ dir_right;
+		Vector3 a = { veh->state.vA.x - RoA, veh->state.vA.x - RoA, veh->state.vA.z - RoA };
+
+		veh->state.vPos = veh->state.vPos + veh->state.vV * dt + a * accel_component;
 
 	}
 	//Release the Critical section
