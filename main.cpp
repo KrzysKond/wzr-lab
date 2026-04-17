@@ -166,6 +166,10 @@ float AcceptOfferAndGiveFuel(int auctioneer_id, float fuel_amount_proposed)
 		frame.transfer_value = my_vehicle->state.amount_of_fuel;
 		frame.proposed_fueld_amount = my_vehicle->state.amount_of_fuel;
 	}
+
+	my_vehicle->state.amount_of_fuel -= frame.proposed_fueld_amount;
+	sprintf(par_view.inscription2, "Przekazanie_paliwa_w_ilosci_%f_na_rzecz_ID_%d", frame.proposed_fueld_amount, frame.iID_receiver);
+
 	int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
 	return frame.transfer_value;
 }
@@ -313,7 +317,8 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 
 				active_auction.fuel_amount = frame.proposed_fueld_amount;
 				active_auction.money_amount = frame.transfer_value;
-				active_auction.player_whos_buying = frame.iID;
+				active_auction.player_whos_selling = frame.iID;
+				active_auction.player_whos_buying = -1;
 
 				has_active_auction = true;
 			}
@@ -330,6 +335,7 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 				active_auction.fuel_amount = frame.proposed_fueld_amount;
 				active_auction.money_amount = frame.transfer_value;
 				active_auction.player_whos_buying = frame.iID;
+				active_auction.player_whos_selling = my_vehicle->iID;
 				has_active_auction = true;
 			}
 			break;
