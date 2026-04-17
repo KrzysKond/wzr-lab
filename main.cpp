@@ -493,7 +493,7 @@ void VirtualWorldCycle()
 	}
 
 	if (auction_offer_responded) {
-		if (try_buy_auction) {
+		if (auction_offer_accepted) {
 			AcceptOfferAndGiveFuel(my_vehicle->iID, active_auction.fuel_amount);
 			SET_AUX_TEXT("zakonczono_transakcje");
 		}
@@ -1072,6 +1072,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 		}
 
 	} // switch po komunikatach
+	}
 	}
 
 	/********************************************************************
