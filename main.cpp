@@ -142,7 +142,7 @@ float TransferSending(int ID_receiver, int transfer_type, float transfer_value)
 		if (my_vehicle->state.amount_of_fuel < transfer_value)
 			frame.transfer_value = my_vehicle->state.amount_of_fuel;
 		my_vehicle->state.amount_of_fuel -= frame.transfer_value;
-		sprintf(par_view.inscription2, "Przekazanie_paliwa_w_ilosci_ %f _na_rzecz_ID_ %d", transfer_value, ID_receiver);
+		sprintf(par_view.inscription2, "Przekazanie_paliwa_w_ilosci_%f_na_rzecz_ID_%d", transfer_value, ID_receiver);
 	}
 
 	if (frame.transfer_value > 0)
@@ -309,12 +309,11 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 		{
 			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
 			{
-				SET_AUCTION_TEXT("Gracz %d proponuje transakcję: %f za %f paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
+				SET_AUCTION_TEXT("Gracz_%d_proponuje_transakcję:_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
 
 				active_auction.fuel_amount = frame.proposed_fueld_amount;
 				active_auction.money_amount = frame.transfer_value;
-				active_auction.player_whos_selling = frame.iID;
-				active_auction.player_whos_buying = -1;
+				active_auction.player_whos_buying = frame.iID;
 
 				has_active_auction = true;
 			}
@@ -473,10 +472,10 @@ void VirtualWorldCycle()
 	}
 
 	if (has_active_auction) {
-		SET_AUCTION_TEXT("Gracz %d oferuje %f paliwa za %f");
+		SET_AUCTION_TEXT("Gracz_%d_oferuje_%f_paliwa_za_%f");
 
 
-		SET_AUX_TEXT("Twoja oferta: %f za %f.", my_vehicle->proposed_money_amount, active_auction.fuel_amount);
+		SET_AUX_TEXT("Twoja_oferta:_%f_za_%f.", my_vehicle->proposed_money_amount, active_auction.fuel_amount);
 	}
 
 	if (responded_to_auction) {
@@ -908,11 +907,12 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 		case 'Y':   // przybli¿enie widoku
 		{
-			if (has_active_auction) {
+			if (has_active_auction && active_auction.player_whos_selling != my_vehicle->iID) {
+
 				try_buy_auction = true;
 				responded_to_auction = true;
 			}
-			if (has_an_auction_to_confirm) {
+			if (has_an_auction_to_confirm && active_auction.player_whos_buying != my_vehicle->iID) {
 				auction_offer_accepted = true;
 				auction_offer_responded = true;
 				has_an_auction_to_confirm = false;
@@ -922,11 +922,11 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 		case 'U':   // przybli¿enie widoku
 		{
-			if (has_active_auction) {
+			if (has_active_auction && active_auction.player_whos_selling != my_vehicle->iID) {
 				try_reject_auction = true;
 				responded_to_auction = true;
 			}
-			if (has_an_auction_to_confirm) {
+			if (has_an_auction_to_confirm && active_auction.player_whos_buying != my_vehicle->iID) {
 				auction_offer_accepted = false;
 				auction_offer_responded = true;
 				has_an_auction_to_confirm = false;
