@@ -1,39 +1,58 @@
-/************************************************************
-					 Grafika OpenGL
+ï»¿/************************************************************
+Grafika OpenGL
 *************************************************************/
-#define __GRAPHICS_CPP_
 #include <windows.h>
-#include <time.h>
 #include <gl\gl.h>
 #include <gl\glu.h>
 #include <iterator> 
 #include <map>
-
-using namespace std;
+#include <time.h>
 
 #include "graphics.h"
+//#include "vector3D.h"
+//#include "quaternion.h"
+#ifndef _OBJECTS__H
 #include "objects.h"
+#endif
+using namespace std;
 
-ViewParams view_parameters;
 
-extern MovableObject *my_vehicle;               // obiekt przypisany do tej aplikacji
-extern map<int, MovableObject*> other_users_vehicles;
+extern FILE *f;
+extern MovableObject *my_vehicle;               // obiekt przypisany do tej aplikacji 
+extern map<int, MovableObject*> network_vehicles;
 extern CRITICAL_SECTION m_cs;
+extern Terrain terrain;
 
-extern Terrain planet_terrain;
-extern long time_day;
+extern long group_existing_time;
+extern long start_time;
 
 int g_GLPixelIndex = 0;
 HGLRC g_hGLContext = NULL;
 unsigned int font_base;
-extern long time_start;                 // czas od uruchomienia potrzebny np. do obliczenia po³o¿enia s³oñca
-extern HWND window_handle;
 
-extern void CreateDisplayLists();		// definiujemy listy tworz¹ce labirynt
-extern void DrawGlobalCoordAxes();
+ViewParameters par_view;
 
+extern void TworzListyWyswietlania();		// definiujemy listy tworzÄ…ce labirynt
+extern void DrawGlobalCoordinateSystem();
 
-int GraphicsInitialisation(HDC g_context)
+void StandardViewParametersSetting(ViewParameters *p)
+{
+	p->initial_camera_direction = Vector3(0, -3, -11);   // direction patrzenia
+	p->initial_camera_position = Vector3(30, 3, 0);          // poÂ³oÂ¿enie kamery
+	p->initial_camera_vertical = Vector3(0, 1, 0);           // direction pionu kamery             
+
+	// Zmienne - ustawiane przez uÅ¼ytkownika
+	p->tracking = 1;                             // tryb Å“ledzenia obiektu przez kamerÃª
+	p->top_view = 0;                          // tryb widoku z gory
+	p->distance = 20.0;                          // distance lub przybliÂ¿enie kamery
+	p->zoom = 1.1;                               // zmiana kÄ…ta widzenia
+	p->cam_angle_z = 0;                            // obrÃ³t kamery gÃ³ra-dÃ³Å‚
+
+	p->shift_to_right = 0;                        // przesuniÄ™cie kamery w prawo (w lewo o wart. ujemnej) - chodzi gÅ‚Ã³wnie o tryb edycji
+	p->shift_to_bottom = 0;                          // przesuniÄ™cie do doÅ‚u (w gÃ³rÄ™ o wart. ujemnej)          i widok z gÃ³ry (klawisz Q)  
+}
+
+int GraphicsInitialization(HDC g_context)
 {
 
 	if (SetWindowPixelFormat(g_context) == FALSE)
@@ -46,174 +65,153 @@ int GraphicsInitialisation(HDC g_context)
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
+	StandardViewParametersSetting(&par_view);
 
-	CreateDisplayLists();		// definiujemy listy tworz¹ce ró¿ne elementy sceny
-	planet_terrain.DrawInitialisation();
+	TworzListyWyswietlania();		// definiujemy listy tworzÄ…ce rÃ³Å¼ne elementy sceny
+	terrain.GraphicsInitialization();
+}
 
-	// pocz¹tkowe ustawienia widoku:
-	// Parametry widoku:
-	view_parameters.cam_direct_1 = Vector3(10, -3, -14);               // kierunek patrzenia
-	view_parameters.cam_pos_1 = Vector3(-35, 6, 10);                   // po³o¿enie kamery
-	view_parameters.cam_vertical_1 = Vector3(0, 1, 0);                 // kierunek pionu kamery        
-	view_parameters.cam_direct_2 = Vector3(0, -1, 0.02);               // to samo dla widoku z góry
-	view_parameters.cam_pos_2 = Vector3(0, 100, 0);
-	view_parameters.cam_vertical_2 = Vector3(0, 0, -1);
-	view_parameters.cam_direct = view_parameters.cam_direct_1;
-	view_parameters.cam_pos = view_parameters.cam_pos_1;
-	view_parameters.cam_vertical = view_parameters.cam_vertical_1;
-	view_parameters.tracking = 1;                                      // tryb œledzenia obiektu przez kamerê
-	view_parameters.top_view = 0;                                      // tryb widoku z góry
-	view_parameters.cam_distance = 40.0;                               // cam_distance widoku z kamery
-	view_parameters.cam_angle = 0;                                     // obrót kamery góra-dó³
-	view_parameters.cam_distance_1 = view_parameters.cam_distance;
-	view_parameters.cam_angle_1 = view_parameters.cam_angle;
-	view_parameters.cam_distance_2 = view_parameters.cam_distance;
-	view_parameters.cam_angle_2 = view_parameters.cam_angle;
-	view_parameters.cam_distance_3 = view_parameters.cam_distance;
-	view_parameters.cam_angle_3 = view_parameters.cam_angle;
-	view_parameters.network_shadow_view = false;
-	view_parameters.zoom = 1.7;
+// Ustwienia kamery w zaleÅ¼noÅ›ci od wartoÅ›ci poczÄ…tkowych (w interakcji), wartoÅ›ci ustawianych
+// przez uÅ¼ytkowika oraz stanu obiektu (np. gdy tryb Å›ledzenia)
+void CameraSettings(Vector3 *position, Vector3 *direction, Vector3 *vertical, ViewParameters pw)
+{
+	if (pw.tracking)  // kamera ruchoma - porusza siÄ™ wraz z obiektem
+	{
+		(*direction) = my_vehicle->state.qOrient.obroc_wektor(Vector3(1, 0, 0));
+		(*vertical) = my_vehicle->state.qOrient.obroc_wektor(Vector3(0, 1, 0));
+		Vector3 prawo_kamery = my_vehicle->state.qOrient.obroc_wektor(Vector3(0, 0, 1));
+
+		(*vertical) = (*vertical).obrot(pw.cam_angle_z, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
+		(*direction) = (*direction).obrot(pw.cam_angle_z, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
+		(*position) = my_vehicle->state.vPos - (*direction)*my_vehicle->length * 0 +
+			(*vertical).znorm()*my_vehicle->height * 5;
+		if (pw.top_view)
+		{
+			(*vertical) = (*direction);
+			(*direction) = Vector3(0, -1, 0);
+			(*position) = (*position) + Vector3(0, 100, 0) + (*vertical)*pw.shift_to_bottom + (*vertical)*(*direction)*pw.shift_to_right;
+		}
+	}
+	else // bez Å›ledzenia - kamera nie podÄ…Å¼a wraz z pojazdem
+	{
+		(*vertical) = pw.initial_camera_vertical;
+		(*direction) = pw.initial_camera_direction;
+		(*position) = pw.initial_camera_position;
+		Vector3 prawo_kamery = ((*direction)*(*vertical)).znorm();
+		(*vertical) = (*vertical).obrot(pw.cam_angle_z / 20, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
+		(*direction) = (*direction).obrot(pw.cam_angle_z / 20, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
+		if (pw.top_view)
+		{
+			(*vertical) = Vector3(0, 0, -1);
+			(*direction) = Vector3(0, -1, 0.02);
+			(*position) = pw.initial_camera_position + Vector3(0, 100, 0) + (*vertical)*pw.shift_to_bottom + (*vertical)*(*direction)*pw.shift_to_right;
+		}
+	}
 }
 
 
 void DrawScene()
 {
-	GLfloat OwnVehicleColor[] = { 0.4f, 0.0f, 0.8f, 0.5f };
-	GLfloat NetworkVehiclesColor[] = { 0.6f, 0.6f, 0.25f, 0.7f };
-	//GLfloat RedSurface[] = { 0.8f, 0.2f, 0.1f, 0.5f };
-	
+	float czas = (float)(group_existing_time + clock() - start_time) / CLOCKS_PER_SEC;  // czas od uruchomienia w [s]
+	GLfloat OwnObjectColor[] = { 0.0f, 0.0f, 0.9f, 0.7f };
+	GLfloat BlueSurfaceTr[] = { 0.6f, 0.0f, 0.9f, 0.3f };
+
+	GLfloat NetworkVehiclesColor[] = { 0.2f, 0.5f, 0.4f, 0.5f };
+	GLfloat RedSurface[] = { 0.6f, 0.2f, 0.1f, 0.5f };
+	GLfloat OrangeSurface[] = { 1.0f, 0.8f, 0.0f, 0.7f };
+	GLfloat GreenSurface[] = { 0.35f, 0.62f, 0.1f, 1.0f };
 	GLfloat YellowSurface[] = { 0.75f, 0.75f, 0.0f, 1.0f };
-	
+	GLfloat YellowLight[] = { 2.0f, 2.0f, 1.0f, 1.0f };
 
 	GLfloat LightAmbient[] = { 0.1f, 0.1f, 0.1f, 0.1f };
-	GLfloat LightDiffuse[] = { 0.4f, 0.7f, 0.7f, 0.7f };
-	GLfloat LightPosition[] = { 5.0f, 5.0f, 5.0f, 0.0f };
+	GLfloat LightDiffuse[] = { 0.7f, 0.7f, 0.7f, 0.7f };
+
+	GLfloat LightPosition[] = { 10.0*cos(czas / 5), 5.0f, 10.0*sin(czas / 5), 0.0f };
+
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glLightfv(GL_LIGHT0, GL_AMBIENT, LightAmbient);		//1 sk³adowa: œwiat³o otaczaj¹ce (bezkierunkowe)
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, LightDiffuse);		//2 sk³adowa: œwiat³o rozproszone (kierunkowe)
+	glLightfv(GL_LIGHT0, GL_AMBIENT, LightAmbient);		//1 skÅ‚adowa: Å›wiatÅ‚o otaczajÄ…ce (bezkierunkowe)
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, LightDiffuse);		//2 skÅ‚adowa: Å›wiatÅ‚o rozproszone (kierunkowe)
 	glLightfv(GL_LIGHT0, GL_POSITION, LightPosition);
 	glEnable(GL_LIGHT0);
 
-	glPushMatrix();
-	//glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, BlueSurface);
+	//glPushMatrix();
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, YellowLight);
 
-	
 
-	Vector3 direction_k, vertical_k, position_k;
-	if (view_parameters.tracking)
-	{
-		direction_k = my_vehicle->state.qOrient.rotate_vector(Vector3(1, 0, 0));
-		vertical_k = my_vehicle->state.qOrient.rotate_vector(Vector3(0, 1, 0));
-		Vector3 v_cam_right = my_vehicle->state.qOrient.rotate_vector(Vector3(0, 0, 1));
+	glLoadIdentity();
+	glClearColor(0.1, 0.1, 0.5, 0.7);   // ustawienie nieczarnego koloru tÅ‚a
+	glTranslatef(-24, 24, -40);
+	glRasterPos2f(4.0, -4.0);
+	glPrint("%s", par_view.inscription1);
+	glRasterPos2f(4.0, -6.0);
+	glPrint("%s", par_view.inscription2);
+	glLoadIdentity();
 
-		if (view_parameters.network_shadow_view)
-		{
-			direction_k = other_users_vehicles[my_vehicle->iID]->state.qOrient.rotate_vector(Vector3(1, 0, 0));
-			vertical_k = other_users_vehicles[my_vehicle->iID]->state.qOrient.rotate_vector(Vector3(0, 1, 0));
-			Vector3 v_cam_right = other_users_vehicles[my_vehicle->iID]->state.qOrient.rotate_vector(Vector3(0, 0, 1));
-		}
-		vertical_k = vertical_k.rotation(view_parameters.cam_angle, v_cam_right.x, v_cam_right.y, v_cam_right.z);
-		direction_k = direction_k.rotation(view_parameters.cam_angle, v_cam_right.x, v_cam_right.y, v_cam_right.z);
-		position_k = my_vehicle->state.vPos - direction_k * my_vehicle->length * 0 +
-			vertical_k.znorm() * my_vehicle->height * 5;
-		if (view_parameters.network_shadow_view)
-		{
-			position_k = other_users_vehicles[my_vehicle->iID]->state.vPos - direction_k * other_users_vehicles[my_vehicle->iID]->length * 0 +
-				vertical_k.znorm() * other_users_vehicles[my_vehicle->iID]->height * 5;
-		}
-		view_parameters.cam_vertical = vertical_k;
-		view_parameters.cam_direct = direction_k;
-		view_parameters.cam_pos = position_k;
-	}
-	else
-	{
-		vertical_k = view_parameters.cam_vertical;
-		direction_k = view_parameters.cam_direct;
-		position_k = view_parameters.cam_pos;
-		Vector3 v_cam_right = (direction_k*vertical_k).znorm();
-		vertical_k = vertical_k.rotation(view_parameters.cam_angle / 20, v_cam_right.x, v_cam_right.y, v_cam_right.z);
-		direction_k = direction_k.rotation(view_parameters.cam_angle / 20, v_cam_right.x, v_cam_right.y, v_cam_right.z);
-	}
 
-	// Ustawianie widoku sceny    
-	gluLookAt(position_k.x - view_parameters.cam_distance*direction_k.x,
-		position_k.y - view_parameters.cam_distance*direction_k.y, position_k.z - view_parameters.cam_distance*direction_k.z,
-		position_k.x + direction_k.x, position_k.y + direction_k.y, position_k.z + direction_k.z,
-		vertical_k.x, vertical_k.y, vertical_k.z);
+	Vector3 pol_k, kierunek_k, pion_k;
+
+	CameraSettings(&pol_k, &kierunek_k, &pion_k, par_view);
+
+	gluLookAt(pol_k.x - par_view.distance*kierunek_k.x,
+		pol_k.y - par_view.distance*kierunek_k.y, pol_k.z - par_view.distance*kierunek_k.z,
+		pol_k.x + kierunek_k.x, pol_k.y + kierunek_k.y, pol_k.z + kierunek_k.z,
+		pion_k.x, pion_k.y, pion_k.z);
 
 	//glRasterPos2f(0.30,-0.27);
-	//glPrint("my_vehicle->iID = %d",my_vehicle->iID ); 
+	//glPrint("MojObiekt->iID = %d",my_vehicle->iID ); 
 
-	DrawGlobalCoordAxes();
+	DrawGlobalCoordinateSystem();
 
-	// s³oñce + t³o:
-	int R = 52000;                // promieñ obiegu
-	long x = (clock() - time_start) % (time_day*CLOCKS_PER_SEC);
-	float angle = (float)x / (time_day*CLOCKS_PER_SEC) * 2 * 3.1415926535898;
-	//char lan[128];
-	//sprintf(lan,"angle = %f\n", angle);
-	//SetWindowText(window_handle, lan);
+	int dw = 0, dk = 0;
+	if (terrain.if_toroidal_world)
+	{
+		if (terrain.border_x > 0) dk = 1;
+		if (terrain.border_z > 0) dw = 1;
+	}
 
-	float cos_abs = fabs(cos(angle));
-	float cos_sq = cos_abs*cos_abs, sin_sq = sin(angle)*sin(angle);
-	float sin_angminpi = fabs(sin(angle/2 - 3.1416/2));                   // 0 gdy s³oñce na antypodach, 1 w po³udnie
-	float sin_angminpi_sqr = sin_angminpi*sin_angminpi;
-	float cos_ang_zachod = fabs(cos((angle - 1.5)*3));                    // 1 w momencie wschodu lub zachodu  
-	glClearColor(0.65*cos_abs*sin_angminpi_sqr + 0.25*sin_sq*cos_ang_zachod, 0.75*cos_abs*sin_angminpi_sqr, 4.0*cos_abs*sin_angminpi_sqr, 1.0);  // ustawienie t³a
-	GLfloat SunColor[] = { 8.0*cos_sq, 8.0 * cos_sq*cos_sq*sin_angminpi, 4.0 * cos_sq*cos_sq*sin_angminpi, 1.0f };
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, SunColor);
-	glPushMatrix();
-	glTranslatef(R*cos(angle), R*(cos(angle)*0.5 - 0.2), R*sin(angle));   // ustawienie s³oñca
-	//glTranslatef(R*cos(angle), 5000, R*sin(angle));
-	GLUquadricObj *Qsph = gluNewQuadric();
-	gluSphere(Qsph, 600.0 + 5000 * sin_sq*sin_sq, 27, 27);
-	gluDeleteQuadric(Qsph);
-	glPopMatrix();
-
-	GLfloat GroundSurface[] = { 0.7*(0.8 + 0.4*sin_angminpi), 0.3*(0.2 + 0.8*sin_angminpi), 0.2*(0.1 + 0.9*sin_angminpi), 1.0f };
-
-	//glPushMatrix();
-	for (int w = -1; w < 2; w++)
-		for (int k = -1; k < 2; k++)
+	for (int w = -dw; w < 1 + dw; w++)
+		for (int k = -dk; k < 1 + dk; k++)
 		{
 			glPushMatrix();
 
-			glTranslatef(planet_terrain.number_of_columns*planet_terrain.field_size*k, 0, planet_terrain.number_of_rows*planet_terrain.field_size*w);
+			glTranslatef(terrain.border_x*k, 0, terrain.border_z*w);
 
-			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, OwnVehicleColor);
+			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, OwnObjectColor);
 			glEnable(GL_BLEND);
 
 			my_vehicle->DrawObject();
 
 			// Lock the Critical section
 			EnterCriticalSection(&m_cs);
-			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, NetworkVehiclesColor);
-			for (map<int, MovableObject*>::iterator it = other_users_vehicles.begin(); it != other_users_vehicles.end(); ++it)
-				it->second->DrawObject();
-			//for each (auto&& it in other_users_vehicles) it.second->DrawObject();   // od VC 2013 (C++ 11)
-			
+			for (map<int, MovableObject*>::iterator it = network_vehicles.begin(); it != network_vehicles.end(); ++it)
+			{
+				if (it->second)
+				{
+					glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, NetworkVehiclesColor);
+					it->second->DrawObject();
+				}
+			}
 			//Release the Critical section
 			LeaveCriticalSection(&m_cs);
-
+			
 			glDisable(GL_BLEND);
-			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, GroundSurface);
-
-			planet_terrain.Draw();
+			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, GreenSurface);
+			
+			terrain.DrawObject();
 			glPopMatrix();
 		}
 
-
-
-	glPopMatrix();
-
+	//glPopMatrix();	
 	glFlush();
-
 }
 
-void WindowResize(int cx, int cy)
+
+
+
+void WindowSizeChange(int cx, int cy)
 {
 	GLsizei width, height;
 	GLdouble aspect;
@@ -227,9 +225,10 @@ void WindowResize(int cx, int cy)
 
 	glViewport(0, 0, width, height);
 
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(35 * view_parameters.zoom, aspect, 1, 100000.0);
+	gluPerspective(55 * par_view.zoom, aspect, 1, 1000000.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -242,12 +241,92 @@ void WindowResize(int cx, int cy)
 
 }
 
+Vector3 Cursor3dCoordinates(int x, int y) // wspÃ³Å‚rzÄ™dne 3D punktu na obrazie 2D
+{
+	//  pobranie macierz modelowania
+	GLdouble model[16];
+	glGetDoublev(GL_MODELVIEW_MATRIX, model);
+
+	// pobranie macierzy rzutowania
+	GLdouble proj[16];
+	glGetDoublev(GL_PROJECTION_MATRIX, proj);
+
+	// pobranie obszaru renderingu
+	GLint view[4];
+	glGetIntegerv(GL_VIEWPORT, view);
+
+	// tablice ze odczytanymi wspÃ³Å‚rzÄ™dnymi w przestrzeni widoku
+	GLdouble wsp[3];
+
+	//RECT rc;
+	//GetClientRect (main_window, &rc);
+
+	GLdouble wsp_z;
+
+	int wynik = gluProject(0, 0, 0, model, proj, view, wsp + 0, wsp + 1, &wsp_z);
+
+	gluUnProject(x, y, wsp_z, model, proj, view, wsp + 0, wsp + 1, wsp + 2);
+	//gluUnProject (x,rc.bottom - y,wsp_z ,model,proj,view,wsp+0,wsp+1,wsp+2);
+	return Vector3(wsp[0], wsp[1], wsp[2]);
+}
+
+Vector3 Cursor3dCoordinates(int x, int y, float height) // wspÃ³Å‚rzÄ™dne 3D punktu na obrazie 2D
+{
+	glTranslatef(0, height, 0);
+	//  pobranie macierz modelowania
+	GLdouble model[16];
+	glGetDoublev(GL_MODELVIEW_MATRIX, model);
+
+	// pobranie macierzy rzutowania
+	GLdouble proj[16];
+	glGetDoublev(GL_PROJECTION_MATRIX, proj);
+
+	// pobranie obszaru renderingu
+	GLint view[4];
+	glGetIntegerv(GL_VIEWPORT, view);
+
+	// tablice ze odczytanymi wspÃ³Å‚rzÄ™dnymi w przestrzeni widoku
+	GLdouble wsp[3];
+
+	//RECT rc;
+	//GetClientRect (main_window, &rc);
+
+	GLdouble wsp_z;
+
+	int wynik = gluProject(0, 0, 0, model, proj, view, wsp + 0, wsp + 1, &wsp_z);
+	gluUnProject(x, y, wsp_z, model, proj, view, wsp + 0, wsp + 1, wsp + 2);
+	glTranslatef(0, -height, 0);
+	//gluUnProject (x,rc.bottom - y,wsp_z ,model,proj,view,wsp+0,wsp+1,wsp+2);
+	return Vector3(wsp[0], wsp[1], wsp[2]);
+}
+
+void ScreenCoordinates(float *xx, float *yy, float *zz, Vector3 Point3D) // wspÃ³Å‚rzÄ™dne punktu na ekranie na podstawie wsp 3D
+{
+	//  pobranie macierz modelowania
+	GLdouble model[16];
+	glGetDoublev(GL_MODELVIEW_MATRIX, model);
+	// pobranie macierzy rzutowania
+	GLdouble proj[16];
+	glGetDoublev(GL_PROJECTION_MATRIX, proj);
+	// pobranie obszaru renderingu
+	GLint view[4];
+	glGetIntegerv(GL_VIEWPORT, view);
+	// tablice ze odczytanymi wspÃ³Å‚rzÄ™dnymi w przestrzeni widoku
+	GLdouble wsp[3], wsp_okn[3];
+	GLdouble liczba;
+	int wynik = gluProject(Point3D.x, Point3D.y, Point3D.z, model, proj, view, wsp_okn + 0, wsp_okn + 1, wsp_okn + 2);
+	gluUnProject(wsp_okn[0], wsp_okn[1], wsp_okn[2], model, proj, view, wsp + 0, wsp + 1, wsp + 2);
+	//fprintf(f,"   Wsp. punktu 3D = (%f, %f, %f), wspolrzedne w oknie = (%f, %f, %f), wsp. punktu = (%f, %f, %f)\n",
+	//  Point3D.x,Point3D.y,Point3D.z,  wsp_okn[0],wsp_okn[1],wsp_okn[2],  wsp[0],wsp[1],wsp[2]);
+
+	(*xx) = wsp_okn[0]; (*yy) = wsp_okn[1]; (*zz) = wsp_okn[2];
+}
 
 void EndOfGraphics()
 {
 	if (wglGetCurrentContext() != NULL)
 	{
-		// dezaktualizacja contextu renderuj¹cego
+		// dezaktualizacja kontekstu renderujÄ…cego
 		wglMakeCurrent(NULL, NULL);
 	}
 	if (g_hGLContext != NULL)
@@ -331,7 +410,7 @@ GLvoid BuildFont(HDC hDC)								// Build Our Bitmap Font
 
 	font_base = glGenLists(96);								// Storage For 96 Characters
 
-	font = CreateFont(-15,							// Height Of Font
+	font = CreateFont(-28,							// Height Of Font
 		0,								// Width Of Font
 		0,								// Angle Of Escapement
 		0,								// Orientation Angle
@@ -347,7 +426,7 @@ GLvoid BuildFont(HDC hDC)								// Build Our Bitmap Font
 		"Courier New");					// Font Name
 
 	oldfont = (HFONT)SelectObject(hDC, font);           // Selects The Font We Want
-	wglUseFontBitmaps(hDC, 32, 96, font_base);				// Builds 96 Characters Starting At Character 32
+	wglUseFontBitmaps(hDC, 31, 96, font_base);				// Builds 96 Characters Starting At Character 32
 	SelectObject(hDC, oldfont);							// Selects The Font We Want
 	DeleteObject(font);									// Delete The Font
 }
@@ -366,13 +445,13 @@ GLvoid glPrint(const char *fmt, ...)	// Custom GL "Print" Routine
 	va_end(ap);			// Results Are Stored In Text
 
 	glPushAttrib(GL_LIST_BIT);	// Pushes The Display List Bits
-	glListBase(font_base - 32);		// Sets The Base Character to 32
+	glListBase(font_base - 31);		// Sets The Base Character to 32
 	glCallLists(strlen(text), GL_UNSIGNED_BYTE, text);	// Draws The Display List Text
 	glPopAttrib();			// Pops The Display List Bits
 }
 
 
-void CreateDisplayLists()
+void TworzListyWyswietlania()
 {
 	glNewList(Wall1, GL_COMPILE);	// GL_COMPILE - lista jest kompilowana, ale nie wykonywana
 
@@ -396,42 +475,36 @@ void CreateDisplayLists()
 	glEnd();
 	glEndList();
 
-	glNewList(Auto, GL_COMPILE);
+	/*glNewList(Floor,GL_COMPILE);
+	glBegin(GL_POLYGON);
+	glNormal3f( 0.0, 1.0, 0.0);
+	glVertex3f( -100, 0, -300.0);
+	glVertex3f( -100, 0, 100.0);
+	glVertex3f( 100, 0, 100.0);
+	glVertex3f( 100, 0, -300.0);
+	glEnd();
+	glEndList();*/
+
+	glNewList(Cube, GL_COMPILE);
 	glBegin(GL_QUADS);
 	// przod
 	glNormal3f(0.0, 0.0, 1.0);
-
 	glVertex3f(0, 0, 1);
 	glVertex3f(0, 1, 1);
-	glVertex3f(0.6, 1, 1);
-	glVertex3f(0.6, 0, 1);
-
-	glVertex3f(0.6, 0, 1);
-	glVertex3f(0.6, 0.5, 1);
-	glVertex3f(1.0, 0.5, 1);
-	glVertex3f(1.0, 0, 1);
+	glVertex3f(1, 1, 1);
+	glVertex3f(1, 0, 1);
 	// tyl
 	glNormal3f(0.0, 0.0, -1.0);
 	glVertex3f(0, 0, 0);
-	glVertex3f(0.6, 0, 0);
-	glVertex3f(0.6, 1, 0);
+	glVertex3f(1, 0, 0);
+	glVertex3f(1, 1, 0);
 	glVertex3f(0, 1, 0);
-
-	glVertex3f(0.6, 0, 0);
-	glVertex3f(1.0, 0, 0);
-	glVertex3f(1.0, 0.5, 0);
-	glVertex3f(0.6, 0.5, 0);
 	// gora
 	glNormal3f(0.0, 1.0, 0.0);
 	glVertex3f(0, 1, 0);
 	glVertex3f(0, 1, 1);
-	glVertex3f(0.6, 1, 1);
-	glVertex3f(0.6, 1, 0);
-
-	glVertex3f(0.6, 0.5, 0);
-	glVertex3f(0.6, 0.5, 1);
-	glVertex3f(1.0, 0.5, 1);
-	glVertex3f(1.0, 0.5, 0);
+	glVertex3f(1, 1, 1);
+	glVertex3f(1, 1, 0);
 	// dol
 	glNormal3f(0.0, -1.0, 0.0);
 	glVertex3f(0, 0, 0);
@@ -440,15 +513,10 @@ void CreateDisplayLists()
 	glVertex3f(0, 0, 1);
 	// prawo
 	glNormal3f(1.0, 0.0, 0.0);
-	glVertex3f(0.6, 0.5, 0);
-	glVertex3f(0.6, 0.5, 1);
-	glVertex3f(0.6, 1, 1);
-	glVertex3f(0.6, 1, 0);
-
-	glVertex3f(1.0, 0.0, 0);
-	glVertex3f(1.0, 0.0, 1);
-	glVertex3f(1.0, 0.5, 1);
-	glVertex3f(1.0, 0.5, 0);
+	glVertex3f(1, 0, 0);
+	glVertex3f(1, 0, 1);
+	glVertex3f(1, 1, 1);
+	glVertex3f(1, 1, 0);
 	// lewo
 	glNormal3f(-1.0, 0.0, 0.0);
 	glVertex3f(0, 0, 0);
@@ -459,10 +527,47 @@ void CreateDisplayLists()
 	glEnd();
 	glEndList();
 
+	glNewList(Cube_skel, GL_COMPILE);
+	glBegin(GL_LINES);
+	glVertex3f(0, 0, 0);
+	glVertex3f(1, 0, 0);
+	glVertex3f(0, 1, 0);
+	glVertex3f(1, 1, 0);
+	glVertex3f(0, 0, 1);
+	glVertex3f(1, 0, 1);
+	glVertex3f(0, 1, 1);
+	glVertex3f(1, 1, 1);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 1, 0);
+	glVertex3f(1, 0, 0);
+	glVertex3f(1, 1, 0);
+	glVertex3f(0, 0, 1);
+	glVertex3f(0, 1, 1);
+	glVertex3f(1, 0, 1);
+	glVertex3f(1, 1, 1);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, 1);
+	glVertex3f(1, 0, 0);
+	glVertex3f(1, 0, 1);
+	glVertex3f(0, 1, 0);
+	glVertex3f(0, 1, 1);
+	glVertex3f(1, 1, 0);
+	glVertex3f(1, 1, 1);
+	glVertex3f(0, 0, 0);
+	glVertex3f(1, 0, 0);
+	glVertex3f(0, 1, 0);
+	glVertex3f(1, 1, 0);
+	glVertex3f(0, 0, 1);
+	glVertex3f(1, 0, 1);
+	glVertex3f(0, 1, 1);
+	glVertex3f(1, 1, 1);
+
+	glEnd();
+	glEndList();
 }
 
 
-void DrawGlobalCoordAxes(void)
+void DrawGlobalCoordinateSystem(void)
 {
 
 	glColor3f(1, 0, 0);
@@ -503,361 +608,3 @@ void DrawGlobalCoordAxes(void)
 	glColor3f(1, 1, 1);
 }
 
-unsigned int	base;
-
-int loadBMP(char *filename, textureImage *texture)
-{
-	FILE *file;
-	unsigned short int bfType;
-	long int bfOffBits;
-	short int biPlanes;
-	short int biBitCount;
-	long int biSizeImage;
-	int i;
-	unsigned char temp;
-
-
-
-	/* make sure the file is there and open it read-only (binary) */
-	if ((file = fopen(filename, "rb")) == NULL)
-	{
-		printf("File not found : %s\n", filename);
-		return 0;
-	}
-
-	if (!fread(&bfType, sizeof(short int), 1, file))
-	{
-		printf("Error reading file!\n");
-		return 0;
-	}
-
-	/* check if file is a bitmap */
-	if (bfType != 19778)
-	{
-		printf("Not a Bitmap-File!\n");
-		return 0;
-	}
-
-	/* get the file size */
-	/* skip file size and reserved fields of bitmap file header */
-	fseek(file, 8, SEEK_CUR);
-	/* get the position of the actual bitmap data */
-	if (!fread(&bfOffBits, sizeof(long int), 1, file))
-	{
-		printf("Error reading file!\n");
-		return 0;
-	}
-
-	//printf("Data at Offset: %ld\n", bfOffBits);
-	/* skip size of bitmap info header */
-	fseek(file, 4, SEEK_CUR);
-	/* get the width of the bitmap */
-	fread(&texture->width, sizeof(int), 1, file);
-	//printf("Width of Bitmap: %d\n", texture->width);
-	/* get the height of the bitmap */
-	fread(&texture->height, sizeof(int), 1, file);
-	//printf("Height of Bitmap: %d\n", texture->height);
-	/* get the number of planes (must be set to 1) */
-	fread(&biPlanes, sizeof(short int), 1, file);
-
-	if (biPlanes != 1)
-	{
-		printf("Error: number of Planes not 1!\n");
-		return 0;
-	}
-
-	/* get the number of bits per pixel */
-	if (!fread(&biBitCount, sizeof(short int), 1, file))
-	{
-		printf("Error reading file!\n");
-		return 0;
-	}
-
-	texture->biCount = biBitCount;
-
-
-	printf("Load texture %s %ix%ix%i ", filename, texture->width, texture->height, texture->biCount);
-
-	biSizeImage = texture->width * texture->height * 3;
-
-	texture->data = (unsigned char *)(malloc(biSizeImage));
-
-
-
-	switch (texture->biCount)
-	{
-	case 24:
-
-		fseek(file, bfOffBits, SEEK_SET);
-		if (!fread(texture->data, biSizeImage, 1, file))
-		{
-			printf("Error loading file!\n");
-			return 0;
-		}
-
-		/* zamiana skladowych red z blue (bgr -> rgb) */
-		for (i = 0; i < biSizeImage; i += 3)
-		{
-			temp = texture->data[i];
-			texture->data[i] = texture->data[i + 2];
-			texture->data[i + 2] = temp;
-		}
-		printf("ok\n");
-		break;
-
-	case 4:
-	{
-		unsigned char *ucpPointer;
-		unsigned char *ucpTabRGB;
-
-		ucpPointer = (unsigned char *)(malloc(biSizeImage / 3));
-		ucpTabRGB = (unsigned char *)(malloc(256 * 4));
-
-		fseek(file, bfOffBits - 256 * 4, SEEK_SET);
-		if (!fread(ucpTabRGB, 256 * 4, 1, file))
-		{
-			printf("Error loading file!\n");
-			return 0;
-		}
-		printf("rgbTab ");
-
-
-		fseek(file, bfOffBits, SEEK_SET);
-		if (!fread(ucpPointer, biSizeImage / 3, 1, file))
-		{
-			printf("Error loading file!\n");
-			return 0;
-		}
-		printf("data ");
-
-		for (i = 0; i < biSizeImage / 3; i++)
-		{
-			texture->data[i * 3 + 2] = ucpTabRGB[ucpPointer[i] * 4];
-			texture->data[i * 3 + 1] = ucpTabRGB[ucpPointer[i] * 4 + 1];
-			texture->data[i * 3] = ucpTabRGB[ucpPointer[i] * 4 + 2];
-		}
-
-		free(ucpPointer);
-		free(ucpTabRGB);
-		printf("ok\n");
-	}
-	break;
-
-
-
-	case 8:
-	{
-
-		unsigned char *ucpPointer;
-		unsigned char *ucpTabRGB;
-
-		ucpPointer = (unsigned char *)(malloc(biSizeImage / 3));
-		ucpTabRGB = (unsigned char *)(malloc(256 * 4));
-
-		fseek(file, bfOffBits - 256 * 4, SEEK_SET);
-		if (!fread(ucpTabRGB, 256 * 4, 1, file))
-		{
-			printf("Error loading file!\n");
-			return 0;
-		}
-		printf("rgbTab ");
-
-
-		fseek(file, bfOffBits, SEEK_SET);
-		if (!fread(ucpPointer, biSizeImage / 3, 1, file))
-		{
-			printf("Error loading file!\n");
-			return 0;
-		}
-		printf("data ");
-
-		for (i = 0; i < biSizeImage / 3; i++)
-		{
-			texture->data[i * 3] = ucpTabRGB[ucpPointer[i] * 4 + 2];
-			texture->data[i * 3 + 1] = ucpTabRGB[ucpPointer[i] * 4 + 1];
-			texture->data[i * 3 + 2] = ucpTabRGB[ucpPointer[i] * 4];
-		}
-
-		free(ucpPointer);
-		free(ucpTabRGB);
-		printf("ok\n");
-	}
-	break;
-
-	default:
-		break;
-
-	}// end switch
-
-
-
-
-	return 1;
-
-}
-
-
-int loadBBMP(char *filename, textureImage *texture)
-{
-
-	char full_name[50];
-	char full_name2[50];
-	textureImage *texRGB;
-	textureImage *texGrey;
-	int iTexSize;
-	int i, ii;
-
-	printf("loadBBMP\n");
-
-	texRGB = (textureImage *)(malloc(sizeof(textureImage)));
-
-	if (loadBMP(filename, texRGB))  // zaladowanie bitmapy
-		printf("Load RGB ");
-	else
-	{
-		printf("Error Load RGB ");
-		return 0;
-	};
-
-
-
-	sprintf(full_name, "%s", filename);
-
-	full_name[strlen(full_name) - 4] = 0;
-
-	sprintf(full_name2, "%s_b.bmp", full_name);
-
-
-	texGrey = (textureImage *)(malloc(sizeof(textureImage)));
-
-	printf("loadGREy %s\n", full_name2);
-
-	if (loadBMP(full_name2, texGrey)) // zaladowanie kolorow
-		printf("Load Grey ");
-	else
-	{
-		printf("Error Load Grey ");
-		return 0;
-	};
-
-
-	texture->width = texRGB->width;
-	texture->height = texRGB->height;
-	texture->biCount = 32;
-
-
-	iTexSize = texture->width*texture->height*(texture->biCount / 8);
-	texture->data = (unsigned char *)(malloc(iTexSize));
-
-	ii = 0;
-
-	for (i = 0; i < iTexSize; i += 4)
-	{
-		texture->data[i] = texRGB->data[ii];
-		texture->data[i + 1] = texRGB->data[ii + 1];
-		texture->data[i + 2] = texRGB->data[ii + 2];
-		texture->data[i + 3] = texGrey->data[ii];
-		ii += 3;
-
-	}
-
-	free(texRGB);
-	free(texGrey);
-
-	return 1;
-
-}
-
-unsigned int loadTextures(char *filename)
-{
-	unsigned char status;
-	textureImage *texti;
-	unsigned int Textur;
-
-	status = 0; // false
-	texti = (textureImage *)(malloc(sizeof(textureImage)));
-	if (loadBMP(filename, texti))                // zaladowanie bitmapy do zmiennej texti  
-	{
-		status = 1;                              // liczba tekstur
-		glGenTextures(1, &Textur);               // generuje nazwy (numerki) tekstur
-		glBindTexture(GL_TEXTURE_2D, Textur);    // ustawienie biezacej tekstury
-
-
-		gluBuild2DMipmaps(GL_TEXTURE_2D, 3, texti->width,// tworzenie mipmap dla biezacej tekstury 
-			texti->height, GL_RGB, GL_UNSIGNED_BYTE, texti->data);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-
-
-		/*
-
-		glTexImage2D(GL_TEXTURE_2D, 0, 3, texti->width, texti->height, 0,
-		GL_RGB, GL_UNSIGNED_BYTE, texti->data);
-
-		//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		*/
-
-		if (texti)
-		{
-			if (texti->data)
-				free(texti->data);
-			free(texti);
-			/* zwonienie pamieci uzywanej podczas tworzenia tekstury */
-		}
-		return Textur;
-	}
-
-	return 0;
-
-
-}
-
-unsigned int loadBlendTextures(char *filename)
-{
-	unsigned char status;
-	textureImage *texti;
-	unsigned int Textur;
-
-	status = 0; // false
-	texti = (textureImage *)(malloc(sizeof(textureImage)));
-	if (loadBBMP(filename, texti))
-	{
-		status = 1; // true
-		glGenTextures(1, &Textur);   /* stworzenie tekstury - struktura */
-		glBindTexture(GL_TEXTURE_2D, Textur);
-		/* generowanie tekstury - wypelnienie danymi */
-
-
-
-		gluBuild2DMipmaps(GL_TEXTURE_2D, 4, texti->width,
-			texti->height, GL_RGBA, GL_UNSIGNED_BYTE, texti->data);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		/*
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, texti->width, texti->height, 0,
-		GL_RGBA, GL_UNSIGNED_BYTE, texti->data);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		*/
-		if (texti)
-		{
-			if (texti->data)
-				free(texti->data);
-			free(texti);
-			/* zwonienie pamieci uzywanej podczas tworzenia tekstury */
-		}
-		return Textur;
-	}
-
-	return 0;
-}

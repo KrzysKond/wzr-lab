@@ -1,308 +1,349 @@
-/****************************************************
-	Virtual Collaborative Teams - The base program 
-    The main module
-****************************************************/
-
-bool if_prediction_test = true;          // simulation independent from user to compare prediction methods
-bool if_delays = false;                   // network delays simulation
-bool if_shadow = true;                    // network shadow to view what is view by other users
-// Scenariusz testu predykcji - tzw. benchmark - dziêki temu mo¿na porównaæ ró¿ne algorytmy predykcji na tym samym scenariuszu:
-// {czas [s], si³a [N], prêdkoœæ skrêcania kó³ [rad/s], stopieñ hamowania} -> przez jaki czas obiekt ma sie poruszaæ z podan¹ prêdkoœci¹ i k¹tem skrêtu kó³
-float test_scenario[][4] = { { 9.5, 110, 0, 0 }, { 5, 20, -0.25 / 8, 0 }, { 0.5, 0, 0, 1.0 }, { 5, 60, 0.25 / 8, 0 }, { 15, 100, 0, 0 } };
-//float test_scenario[][4] = { { 9.5, 500, 0, 0 }, { 10, -200, -0.25 / 2, 0 } };  // scenariusz ekstremalny
-
-
-/*
-* local car coord space:
-	+x forward
-	+z right
-	+y up
-
-	Pos(t + dt) = Pos(t) + V(t) * dt + A(t) * (dt*dt)/2
-
-	AsixToQuat() - oœ na quaternion
-	AsixAngle() - reprezentacja k¹towo-osiowa quaterniona
-
-	vec_rot(dt) = V_ang(t0) * dt + A_ang(t0) * (dt*dt)/2
-	vec_rot zamieniamy na oœ k¹t obrotu, u¿ywany AsixToQuat() by uzyskaæ quaternion
-	quat_orient(t + dt) = quat_rot(dt) * quat_orient(t)
-*/
+ï»¿/****************************************************
+	Wirtualne zespoly robocze - przykladowy projekt w C++
+	Do zadaÅ„ dotyczÄ…cych wspÃ³Å‚pracy, ekstrapolacji i
+	autonomicznych obiektÃ³w
+	****************************************************/
 
 #include <windows.h>
 #include <math.h>
 #include <time.h>
+
 #include <gl\gl.h>
 #include <gl\glu.h>
 #include <iterator> 
 #include <map>
+using namespace std;
 
 #include "objects.h"
 #include "graphics.h"
 #include "net.h"
-using namespace std;
-
-FILE *f = fopen("wzr_log_file.txt", "a"); // plik do zapisu informacji testowych
 
 
-MovableObject *my_vehicle;               // obiekt przypisany do tej aplikacji
-Terrain planet_terrain;
+bool if_different_skills = true;          // czy zrÃ³Â¿nicowanie umiejÃªtnoÅ“ci (dla kaÂ¿dego pojazdu losowane sÂ¹ umiejÃªtnoÅ“ci
+// zbierania gotÃ³wki i paliwa)
 
+FILE *f = fopen("WZR_log.txt", "w");     // plik do zapisu informacji testowych
 
-map<int, MovableObject*> other_users_vehicles;
+MovableObject *my_vehicle;             // Object przypisany do tej aplikacji
 
-float fDt;                            // sredni czas pomiedzy dwoma kolejnymi cyklami symulacji i wyswietlania
-long time_of_cycle, number_of_cyc=0;   // zmienne pomocnicze potrzebne do obliczania fDt
-long time_start = clock();           // moment uruchomienia aplikacji 
-long time_last_send = 0;             // moment wys³ania ostatniej ramki  
+Terrain terrain;
+map<int, MovableObject*> network_vehicles;
 
-multicast_net *multi_reciv;          // wsk do obiektu zajmujacego sie odbiorem komunikatow
-multicast_net *multi_send;           //   -||-  wysylaniem komunikatow
+float fDt;                          // sredni czas pomiedzy dwoma kolejnymi cyklami symulacji i wyswietlania
+long VW_cycle_time, counter_of_simulations;     // zmienne pomocnicze potrzebne do obliczania fDt
+long start_time = clock();          // czas od poczatku dzialania aplikacji  
+long group_existing_time = clock();    // czas od poczÂ¹tku istnienia grupy roboczej (czas od uruchom. pierwszej aplikacji)      
 
-HANDLE threadReciv;                  // uchwyt w¹tku odbioru komunikatów
-HWND window_handle;                    // uchwyt do g³ównego okna programu 
-CRITICAL_SECTION m_cs;               // do synchronizacji w¹tków
+multicast_net *multi_reciv;         // wsk do obiektu zajmujacego sie odbiorem komunikatow
+multicast_net *multi_send;          //   -||-  wysylaniem komunikatow
 
-bool if_SHIFT_pressed = false;
-bool if_ID_visible = true;           // czy rysowac nr ID przy ka¿dym obiekcie
-bool if_mouse_control = false;       // sterowanie za pomoc¹ klawisza myszki
-int mouse_cursor_x = 0, mouse_cursor_y = 0;     // po³o¿enie kursora myszy
+HANDLE threadReciv;                 // uchwyt wÂ¹tku odbioru komunikatÃ³w
+extern HWND main_window;
+CRITICAL_SECTION m_cs;               // do synchronizacji wÄ…tkÃ³w
 
-extern ViewParams view_parameters;           // ustawienia widoku zdefiniowane w grafice
+bool SHIFT_pressed = 0;
+bool CTRL_pressed = 0;
+bool ALT_pressed = 0;
+bool L_pressed = 0;
+//bool rejestracja_uczestnikow = true;   // rejestracja trwa do momentu wziÃªcia przedmiotu przez ktÃ³regokolwiek uczestnika,
+// w przeciwnym razie trzeba by przesyÂ³aÃ¦ caÂ³y state Å“rodowiska nowicjuszowi
 
-long time_day = 1600;         // czas trwania dnia w [s]
+// Parametry widoku:
+extern ViewParameters par_view;
 
-// zmienne zwi¹zane z nawigacj¹ obliczeniow¹:
-long number_of_send_trials = 0;        // liczba prób wysylania ramki ze stanem  
-float sum_differences_of_pos = 0;             // sumaryczna odleg³oœæ pomiêdzy po³o¿eniem rzeczywistym (symulowanym) a ekstrapolowanym
-float sum_of_angle_differences = 0;             // sumaryczna ró¿nica k¹towa -||- 
+bool mouse_control = 0;                   // sterowanie pojazdem za pomocÂ¹ myszki
+int cursor_x, cursor_y;                         // poloÂ¿enie kursora myszki w chwili wÂ³Â¹czenia sterowania
 
+extern float TransferSending(int ID_receiver, int transfer_type, float transfer_value);
 
-struct Frame                                      // g³ówna struktura s³u¿¹ca do przesy³ania informacji
-{	
-	int iID;                                      // identyfikator obiektu, którego 
-	int type;                                     // typ ramki: informacja o stateie, informacja o zamkniêciu, komunikat tekstowy, ... 
-	ObjectState state;                            // po³o¿enie, prêdkoœæ: œrodka masy + k¹towe, ...
-
-	long sending_time;                            // tzw. znacznik czasu potrzebny np. do obliczenia opóŸnienia
-	int iID_receiver;                             // nr ID odbiorcy wiadomoœci, jeœli skierowana jest tylko do niego
-	int ID_team;
+enum frame_types {
+	OBJECT_STATE, ITEM_TAKING, ITEM_RENEWAL, COLLISION, TRANSFER
 };
 
+enum transfer_types { MONEY, FUEL};
+
+struct Frame
+{
+	int iID;
+	int frame_type;
+	ObjectState state;
+	
+	int iID_receiver;          // nr ID adresata wiadomoÅ“ci (pozostali uczestnicy powinni wiadomoÅ“Ã¦ zignorowaÃ¦)
+
+	int item_number;           // nr przedmiotu, ktÃ³ry zostaÂ³ wziÃªty lub odzyskany
+	Vector3 vdV_collision;     // wektor prÃªdkoÅ“ci wyjÅ“ciowej po kolizji (uczestnik o wskazanym adresie powinien 
+	// przyjÂ¹Ã¦ tÂ¹ prÃªdkoÅ“Ã¦)  
+
+	int transfer_type;         // gotÃ³wka, paliwo
+	float transfer_value;      // iloÅ“Ã¦ gotÃ³wki lub paliwa 
+	int team_number;
+
+	long existing_time;        // czas jaki uplynÂ¹Â³ od uruchomienia programu
+};
+
+// Funkcja wysylajaca ramke z przekazem, zwraca zrealizowanÂ¹ wartoÅ“Ã¦ przekazu
+float TransferSending(int ID_receiver, int transfer_type, float transfer_value)
+{
+	Frame frame;
+	frame.frame_type = TRANSFER;
+	frame.iID_receiver = ID_receiver;
+	frame.transfer_type = transfer_type;
+	frame.transfer_value = transfer_value;
+	frame.iID = my_vehicle->iID;
+
+	// tutaj naleÂ¿aÂ³oby uzyskaÃ¦ potwierdzenie przekazu zanim sumy zostanÂ¹ odjÃªte
+	if (transfer_type == MONEY)
+	{
+		if (my_vehicle->state.money < transfer_value)
+			frame.transfer_value = my_vehicle->state.money;
+		my_vehicle->state.money -= frame.transfer_value;
+		sprintf(par_view.inscription2, "Przelew_sumy_ %f _na_rzecz_ID_ %d", transfer_value, ID_receiver);
+	}
+	else if (transfer_type == FUEL)
+	{
+		if (my_vehicle->state.amount_of_fuel < transfer_value)
+			frame.transfer_value = my_vehicle->state.amount_of_fuel;
+		my_vehicle->state.amount_of_fuel -= frame.transfer_value;
+		sprintf(par_view.inscription2, "Przekazanie_paliwa_w_ilosci_ %f _na_rzecz_ID_ %d", transfer_value, ID_receiver);
+	}
+
+	if (frame.transfer_value > 0)
+		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
+	return frame.transfer_value;
+}
 
 //******************************************
-// Funkcja obs³ugi w¹tku odbioru komunikatów 
-// UWAGA!  Odbierane s¹ te¿ komunikaty z w³asnej aplikacji by porównaæ obraz ekstrapolowany do rzeczywistego.
-DWORD WINAPI ReceiveThreadFun(void *ptr)
+// Funkcja obsÂ³ugi wÂ¹tku odbioru komunikatÃ³w 
+DWORD WINAPI ReceiveThreadFunction(void *ptr)
 {
-	multicast_net *pmt_net = (multicast_net*)ptr;  // wskaŸnik do obiektu klasy multicast_net
+	multicast_net *pmt_net = (multicast_net*)ptr;  // wskaÅ¸nik do obiektu klasy multicast_net
+	int size;                                 // liczba bajtÃ³w ramki otrzymanej z sieci
 	Frame frame;
+	ObjectState state;
 
 	while (1)
 	{
-		int frame_size = pmt_net->reciv((char*)&frame, sizeof(Frame));   // oczekiwanie na nadejœcie ramki 
-		ObjectState state = frame.state;
-
-		//fprintf(f, "odebrano stan iID = %d, ID dla mojego obiektu = %d\n", frame.iID, my_vehicle->iID);
-
+		size = pmt_net->reciv((char*)&frame, sizeof(Frame));   // oczekiwanie na nadejÅ“cie ramki 
 		// Lock the Critical section
-		EnterCriticalSection(&m_cs);                                     // wejœcie na œcie¿kê krytyczn¹ - by inne w¹tki (np. g³ówny) nie wspó³dzieli³ 
-	                                                                     // tablicy other_users_vehicles
+		EnterCriticalSection(&m_cs);               // wejÅ›cie na Å›cieÅ¼kÄ™ krytycznÄ… - by inne wÄ…tki (np. gÅ‚Ã³wny) nie wspÃ³Å‚dzieliÅ‚ 
 
-		if ((if_shadow) || (frame.iID != my_vehicle->iID))               // jeœli to nie mój w³asny obiekt
+		switch (frame.frame_type)
 		{
-			
-			if ((other_users_vehicles.size() == 0) || (other_users_vehicles[frame.iID] == NULL))        // nie ma jeszcze takiego obiektu w tablicy -> trzeba go
-				// stworzyæ
+		case OBJECT_STATE:           // podstawowy typ ramki informujÂ¹cej o stanie obiektu              
+		{
+			state = frame.state;
+			//fprintf(f,"odebrano state iID = %d, ID dla mojego obiektu = %d\n",state.iID,my_vehicle->iID);
+			if ((frame.iID != my_vehicle->iID))          // jeÅ“li to nie mÃ³j wÂ³asny Object
 			{
-				MovableObject *ob = new MovableObject();
-				ob->iID = frame.iID;
-				other_users_vehicles[frame.iID] = ob;		
-				//fprintf(f, "zarejestrowano %d obcy obiekt o ID = %d\n", iLiczbaCudzychOb - 1, CudzeObiekty[iLiczbaCudzychOb]->iID);
+
+				if ((network_vehicles.size() == 0) || (network_vehicles[frame.iID] == NULL))         // nie ma jeszcze takiego obiektu w tablicy -> trzeba go stworzyÃ¦
+				{
+					MovableObject *ob = new MovableObject(&terrain);
+					ob->iID = frame.iID;
+					network_vehicles[frame.iID] = ob;
+					if (frame.existing_time > group_existing_time) group_existing_time = frame.existing_time;
+					ob->ChangeState(state);   // aktualizacja stanu obiektu obcego 
+					terrain.InsertObjectIntoSectors(ob);
+					// wysÂ³anie nowemu uczestnikowi informacji o wszystkich wziÃªtych przedmiotach:
+					for (long i = 0; i < terrain.number_of_items; i++)
+						if ((terrain.p[i].to_take == 0) && (terrain.p[i].if_taken_by_me))
+						{
+							Frame frame;
+							frame.frame_type = ITEM_TAKING;
+							frame.item_number = i;
+							frame.state = my_vehicle->State();
+							frame.iID = my_vehicle->iID;
+							int iSIZE = multi_send->send((char*)&frame, sizeof(Frame));
+						}
+
+				}
+				else if ((network_vehicles.size() > 0) && (network_vehicles[frame.iID] != NULL))
+				{
+					terrain.DeleteObjectsFromSectors(network_vehicles[frame.iID]);
+					network_vehicles[frame.iID]->ChangeState(state);   // aktualizacja stanu obiektu obcego 	
+					terrain.InsertObjectIntoSectors(network_vehicles[frame.iID]);
+				}				
 			}
-			other_users_vehicles[frame.iID]->StateUpdate(state);             // aktualizacja stateu obiektu obcego 	
-			
-		}	
-		//Release the Critical section
-		LeaveCriticalSection(&m_cs);                                     // wyjœcie ze œcie¿ki krytycznej
+			break;
+		}
+		case ITEM_TAKING:            // frame informujÂ¹ca, Â¿e ktoÅ“ wziÂ¹Â³ przedmiot o podanym numerze
+		{
+			state = frame.state;
+			if ((frame.item_number < terrain.number_of_items) && (frame.iID != my_vehicle->iID))
+			{
+				terrain.p[frame.item_number].to_take = 0;
+				terrain.p[frame.item_number].if_taken_by_me = 0;
+			}
+			break;
+		}
+		case ITEM_RENEWAL:       // frame informujaca, Â¿e przedmiot wczeÅ“niej wziÃªty pojawiÂ³ siÃª znowu w tym samym miejscu
+		{
+			if (frame.item_number < terrain.number_of_items)
+				terrain.p[frame.item_number].to_take = 1;
+			break;
+		}
+		case COLLISION:                       // frame informujÂ¹ca o tym, Â¿e Object ulegÂ³ kolizji
+		{
+			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktÃ³ry uczestniczyÂ³ w kolizji zgadza siÃª z moim ID 
+			{
+				my_vehicle->vdV_collision = frame.vdV_collision; // przepisuje poprawkÃª wÂ³asnej prÃªdkoÅ“ci
+				my_vehicle->iID_collider = my_vehicle->iID; // ustawiam nr. kolidujacego jako wÂ³asny na znak, Â¿e powinienem poprawiÃ¦ prÃªdkoÅ“Ã¦
+			}
+			break;
+		}
+		case TRANSFER:                       // frame informujÂ¹ca o przelewie pieniÃªÂ¿nym lub przekazaniu towaru    
+		{
+			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siÃª z moim ID 
+			{
+				if (frame.transfer_type == MONEY)
+					my_vehicle->state.money += frame.transfer_value;
+				else if (frame.transfer_type == FUEL)
+					my_vehicle->state.amount_of_fuel += frame.transfer_value;
+
+				// naleÂ¿aÂ³oby jeszcze przelew potwierdziÃ¦ (w UDP ramki mogÂ¹ byÃ¦ gubione!)
+			}
+			break;
+		}
+		
+		} // switch po typach ramek
+		// Opuszczenie Å›cieÅ¼ki krytycznej / Release the Critical section
+		LeaveCriticalSection(&m_cs);               // wyjÅ›cie ze Å›cieÅ¼ki krytycznej
 	}  // while(1)
 	return 1;
 }
 
 // *****************************************************************
-// ****    Wszystko co trzeba zrobiæ podczas uruchamiania aplikacji
-// ****    poza grafik¹   
+// ****    Wszystko co trzeba zrobiÃ¦ podczas uruchamiania aplikacji
+// ****    poza grafikÂ¹   
 void InteractionInitialisation()
 {
 	DWORD dwThreadId;
 
-	my_vehicle = new MovableObject();    // tworzenie wlasnego obiektu
+	my_vehicle = new MovableObject(&terrain);    // tworzenie wlasnego obiektu
+	if (if_different_skills == false)
+		my_vehicle->state.money_collection_skills = my_vehicle->state.fuel_collection_skills = 1.0;
 
-	time_of_cycle = clock();             // pomiar aktualnego czasu
+	VW_cycle_time = clock();             // pomiar aktualnego czasu
 
 	// obiekty sieciowe typu multicast (z podaniem adresu WZR oraz numeru portu)
-	multi_reciv = new multicast_net("224.12.15.148", 10001);      // obiekt do odbioru ramek sieciowych
-	multi_send = new multicast_net("224.12.15.148", 10001);       // obiekt do wysy³ania ramek
+	multi_reciv = new multicast_net("224.10.120.125", 10001);      // Object do odbioru ramek sieciowych
+	multi_send = new multicast_net("224.10.120.125", 10001);       // Object do wysyÂ³ania ramek
 
-
-	// uruchomienie w¹tku obs³uguj¹cego odbiór komunikatów:
+	// uruchomienie watku obslugujacego odbior komunikatow
 	threadReciv = CreateThread(
 		NULL,                        // no security attributes
 		0,                           // use default stack size
-		ReceiveThreadFun,                // thread function
-		(void *)multi_reciv,               // argument to thread function
-		NULL,                        // use default creation flags
+		ReceiveThreadFunction,       // thread function
+		(void *)multi_reciv,         // argument to thread function
+		0,                           // use default creation flags
 		&dwThreadId);                // returns the thread identifier
-	SetThreadPriority(threadReciv, THREAD_PRIORITY_HIGHEST);
-
-
-
-	fprintf(f,"poczatek interakcji\n");
+		
 }
 
 
 // *****************************************************************
-// ****    Wszystko co trzeba zrobiæ w ka¿dym cyklu dzia³ania 
-// ****    aplikacji poza grafik¹ 
+// ****    Wszystko co trzeba zrobiÃ¦ w kaÂ¿dym cyklu dziaÂ³ania 
+// ****    aplikacji poza grafikÂ¹ 
 void VirtualWorldCycle()
 {
-	number_of_cyc++;
-	float time_from_start_in_s = (float)(clock() - time_start) / CLOCKS_PER_SEC;  // czas w sek. jaki up³yn¹³ od uruchomienia programu
+	counter_of_simulations++;
 
-	if (number_of_cyc % 50 == 0)          // jeœli licznik cykli przekroczy³ pewn¹ wartoœæ, to
-	{                              // nale¿y na nowo obliczyæ œredni czas cyklu fDt
-		char text[256];
-		long prev_time = time_of_cycle;
-		time_of_cycle = clock();
-		float fFps = (50 * CLOCKS_PER_SEC) / (float)(time_of_cycle - prev_time);
+	// obliczenie Å“redniego czasu pomiÃªdzy dwoma kolejnnymi symulacjami po to, by zachowaÃ¦  fizycznych 
+	if (counter_of_simulations % 50 == 0)          // jeÅ“li licznik cykli przekroczyÂ³ pewnÂ¹ wartoÅ“Ã¦, to
+	{                                   // naleÂ¿y na nowo obliczyÃ¦ Å“redni czas cyklu fDt
+		char text[200];
+		long prev_time = VW_cycle_time;
+		VW_cycle_time = clock();
+		float fFps = (50 * CLOCKS_PER_SEC) / (float)(VW_cycle_time - prev_time);
 		if (fFps != 0) fDt = 1.0 / fFps; else fDt = 1;
-	
-		sprintf(text, "WZR-2025/26, tem.3, wer.h (jak Hubert), czêstoœæ pr.wys. = %0.2f[r/s]  œr.odl = %0.3f[m]  œr.ro¿n.k¹t. = %0.3f[st]",
-			(float)number_of_send_trials / time_from_start_in_s, sum_differences_of_pos / number_of_cyc, 
-			sum_of_angle_differences / number_of_cyc*180.0 / 3.14159);
 
-		if (time_from_start_in_s > 5)
-			SetWindowText(window_handle, text); // wyœwietlenie aktualnych odchy³ek						
+		sprintf(par_view.inscription1, " %0.0f_fps, fuel = %0.2f, money = %d,", fFps, my_vehicle->state.amount_of_fuel, my_vehicle->state.money);
+		if (counter_of_simulations % 500 == 0) sprintf(par_view.inscription2, "");
 	}
 
-	// obliczenie œredniej odleg³oœci i œredniej ró¿nicy k¹towej pomiêdzy pojazdem a cieniem:
-	EnterCriticalSection(&m_cs);
-	MovableObject *car = (other_users_vehicles.size() > 0 ? other_users_vehicles[my_vehicle->iID] : NULL);       
-	if (car != NULL)
-	{
-		sum_differences_of_pos += DistanceBetweenPointsOnTetraMap(my_vehicle->state.vPos, car->state.vPos);
-		sum_of_angle_differences += AngleBetweenQuats(my_vehicle->state.qOrient, car->state.qOrient);
-	}
-	else {
-		sum_differences_of_pos += DistanceBetweenPointsOnTetraMap(my_vehicle->state.vPos, Vector3(0,0,0));  
-		sum_of_angle_differences += AngleBetweenQuats(my_vehicle->state.qOrient, quaternion(0, 0, 0, 1));
-	}
-	LeaveCriticalSection(&m_cs);
-	
-	// test predykcji:
-	if (if_prediction_test)
-	{
-		int number_of_actions = sizeof(test_scenario) / (4 * sizeof(float));
-		bool test_finished = test_scenario_step(my_vehicle, test_scenario, number_of_actions, time_from_start_in_s);
+	terrain.DeleteObjectsFromSectors(my_vehicle);
+	my_vehicle->Simulation(fDt);                    // symulacja wÂ³asnego obiektu
+	terrain.InsertObjectIntoSectors(my_vehicle);
 
-		if (test_finished) // czas dobiegl konca -> koniec testu 
-		{
-			if_prediction_test = false;
-			char text[200];
-			sprintf(text, "Po czasie %3.2f[s]  œr.czêstoœæ = %0.2f[r/s]  œr.odl = %0.3f[m]  œr.ró¿n.k¹t. = %0.3f[st]",
-				time_from_start_in_s, (float)number_of_send_trials / time_from_start_in_s, 
-				sum_differences_of_pos / number_of_cyc, sum_of_angle_differences / number_of_cyc*180.0 / 3.14159);
-			fprintf(f, "%s\n", text);
-			MessageBox(window_handle, text, "Test predykcji", MB_OK);
-		}
-	}
 
-	my_vehicle->Simulation(fDt);                    // symulacja w³asnego obiektu
-
-	time_from_start_in_s = (float)(clock() - time_start) / CLOCKS_PER_SEC;
-	
-	//if ((float)(clock() - time_last_send) / CLOCKS_PER_SEC >= 0.2 + 30 * (time_from_start_in_s < 30))
-	if ((float)(clock() - time_last_send) / CLOCKS_PER_SEC >= 1.0)
+	if ((my_vehicle->iID_collider > -1) &&             // wykryto kolizjÃª - wysyÂ³am specjalnÂ¹ ramkÃª, by poinformowaÃ¦ o tym drugiego uczestnika
+		(my_vehicle->iID_collider != my_vehicle->iID)) // oczywiÅ“cie wtedy, gdy nie chodzi o mÃ³j pojazd
 	{
 		Frame frame;
-		frame.state = my_vehicle->State();                   // stan w³asnego obiektu 
+		frame.frame_type = COLLISION;
+		frame.iID_receiver = my_vehicle->iID_collider;
+		frame.vdV_collision = my_vehicle->vdV_collision;
 		frame.iID = my_vehicle->iID;
-		multi_send->send((char*)&frame, sizeof(Frame));  // wys³anie komunikatu do pozosta³ych aplikacji co pewien czas
-		time_last_send = clock();
-		number_of_send_trials++;
+		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
+		char text[128];
+		sprintf(par_view.inscription2, "Kolizja_z_obiektem_o_ID = %d", my_vehicle->iID_collider);
+		//SetWindowText(main_window,text);
+
+		my_vehicle->iID_collider = -1;
 	}
 
-	// ---------------------------------------------------------------
-	// ---------------------------------------------------------------
-	// ---------------------------------------------------------------
-	// ------------  Miejsce na predykcjê stanu:  --------------------
-	// ------------  The place for state prediction:  ----------------
-	// Lock the Critical section
-	EnterCriticalSection(&m_cs);
-	for (map<int, MovableObject*>::iterator it = other_users_vehicles.begin(); it != other_users_vehicles.end(); ++it)
+	// wyslanie komunikatu o stanie obiektu przypisanego do aplikacji (my_vehicle):    
+
+	Frame frame;
+	frame.frame_type = OBJECT_STATE;
+	frame.state = my_vehicle->State();         // state wÂ³asnego obiektu 
+	frame.iID = my_vehicle->iID;
+	frame.existing_time = clock() - start_time;
+	int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
+
+
+	// wziÃªcie przedmiotu -> wysyÂ³anie ramki 
+	if (my_vehicle->number_of_taking_item > -1)
 	{
-		MovableObject *veh = it->second;
+		Frame frame;
+		frame.frame_type = ITEM_TAKING;
+		frame.item_number = my_vehicle->number_of_taking_item;
+		frame.state = my_vehicle->State();
+		frame.iID = my_vehicle->iID;
+		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
 
-		const float dt = fDt;
-		const float accel_component = 0.5f * dt * dt;
+		sprintf(par_view.inscription2, "Wziecie_przedmiotu_o_wartosci_ %f", my_vehicle->taking_value);
 
-
-		//veh->state.vPos = ...
-		//veh->state.vV = ....
-		//veh->state.qOrient = ....
-		//veh->state.vV_ang = ....
-
-		/*
-				AsixToQuat() - oœ na quaternion
-	AsixAngle() - reprezentacja k¹towo-osiowa quaterniona
-
-	vec_rot(dt) = V_ang(t0) * dt + A_ang(t0) * (dt*dt)/2
-	vec_rot zamieniamy na oœ k¹t obrotu, u¿ywany AsixToQuat() by uzyskaæ quaternion
-	quat_orient(t + dt) = quat_rot(dt) * quat_orient(t)
-
-	zad 2:
-	w A s¹ wszystkie przyspeiszenia - od sily napedowej, od hamowania i grawitacja, kierowca bedzie sobie trzymal przez jakis czas, tak samo w przypadku hamulca, wiec nasza predykcja dziala, ale tarcie i grawitacja s¹ krótkotrwa³e i du¿e co do wartoœæi, wiêc musimy wzi¹æ pod uwagê to
-
-	nale¿ albo rozbiæ przyspieszenie na sk³adniki i ka¿dy sk³adnik przemno¿yæ przez odpowiedni mno¿nik, ale zwiêksza to iloœæ informacji wysy³anych, najproœciej usun¹æ sk³adow¹ boczn¹ przyspieszenia (sk³¹dowa lokalnego wektora w prawo) - obliczyæ dot product wektora right z przyspieszeniem i odj¹æ od ogólnego przyspiesznenia
-		*/
-
-		Vector3 rot_in_frame = veh->state.vA_ang;
-		Vector3 rot_axis = rot_in_frame.znorm();
-		float rot_angle = rot_axis.length() * dt;
-		quaternion rot_in_frame_q = AsixToQuat(rot_axis, rot_angle);
-		quaternion quat_orient_now = rot_in_frame_q * veh->state.qOrient;
-
-		veh->state.qOrient = quat_orient_now.n();
-
-		Vector3 dir_right = veh->state.qOrient.rotate_vector(Vector3(0, 0, 1));
-		Vector3 vV_right = dir_right * (veh->state.vV * dir_right);
-		dir_right.znorm();
-		vV_right.znorm();
-		float RoA = veh->state.vA ^ dir_right;
-		//Vector3 RxA = dir_right * veh->state.vA;
-		Vector3 a = { veh->state.vA.x - RoA, veh->state.vA.x - RoA, veh->state.vA.z - RoA };
-
-		veh->state.vPos = veh->state.vPos + veh->state.vV * dt + a * accel_component;
-
+		my_vehicle->number_of_taking_item = -1;
+		my_vehicle->taking_value = 0;
 	}
-	//Release the Critical section
-	LeaveCriticalSection(&m_cs);
+
+	// odnawianie siÃª przedmiotu -> wysyÂ³anie ramki
+	if (my_vehicle->number_of_renewed_item > -1)
+	{                             // jeÅ“li minÂ¹Â³ pewnien okres czasu przedmiot moÂ¿e zostaÃ¦ przywrÃ³cony
+		Frame frame;
+		frame.frame_type = ITEM_RENEWAL;
+		frame.item_number = my_vehicle->number_of_renewed_item;
+		frame.iID = my_vehicle->iID;
+		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
+		my_vehicle->number_of_renewed_item = -1;
+	}
+
 }
 
 // *****************************************************************
-// ****    Wszystko co trzeba zrobiæ podczas zamykania aplikacji
-// ****    poza grafik¹ 
+// ****    Wszystko co trzeba zrobiÃ¦ podczas zamykania aplikacji
+// ****    poza grafikÂ¹ 
 void EndOfInteraction()
 {
+	TerminateThread(threadReciv, 1);
 	fprintf(f, "Koniec interakcji\n");
 	fclose(f);
 }
 
+
 //deklaracja funkcji obslugi okna
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
-HDC g_context = NULL;        // uchwyt contextu graficznego
 
+HWND main_window;                   // uchwyt do okna aplikacji
+HDC g_context = NULL;        // uchwyt kontekstu graficznego
 
+bool terrain_edition_mode = 0;
 
 //funkcja Main - dla Windows
 int WINAPI WinMain(HINSTANCE hInstance,
@@ -310,190 +351,236 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	LPSTR     lpCmdLine,
 	int       nCmdShow)
 {
-	
-	//Initilize the critical section
+	//Initilize the critical section:
 	InitializeCriticalSection(&m_cs);
 
-	MSG message;		  //innymi slowy "komunikat"
-	WNDCLASS main_class; //klasa g³ównego okna aplikacji
+	MSG system_message;		  //innymi slowy "komunikat"
+	WNDCLASS window_class; //klasa gÅ‚Ã³wnego okna aplikacji
 
-	static char class_name[] = "Klasa_Podstawowa";
+	static char class_name[] = "Basic";
 
-	//Definiujemy klase g³ównego okna aplikacji
+	//Definiujemy klase gÅ‚Ã³wnego okna aplikacji
 	//Okreslamy tu wlasciwosci okna, szczegoly wygladu oraz
 	//adres funkcji przetwarzajacej komunikaty
-	main_class.style = CS_HREDRAW | CS_VREDRAW;
-	main_class.lpfnWndProc = WndProc; //adres funkcji realizuj¹cej przetwarzanie meldunków 
-	main_class.cbClsExtra = 0;
-	main_class.cbWndExtra = 0;
-	main_class.hInstance = hInstance; //identyfikator procesu przekazany przez MS Windows podczas uruchamiania programu
-	main_class.hIcon = 0;
-	main_class.hCursor = LoadCursor(0, IDC_ARROW);
-	main_class.hbrBackground = (HBRUSH)GetStockObject(GRAY_BRUSH);
-	main_class.lpszMenuName = "Menu";
-	main_class.lpszClassName = class_name;
+	window_class.style = CS_HREDRAW | CS_VREDRAW;
+	window_class.lpfnWndProc = WndProc; //adres funkcji realizujÄ…cej przetwarzanie meldunkÃ³w 
+	window_class.cbClsExtra = 0;
+	window_class.cbWndExtra = 0;
+	window_class.hInstance = hInstance; //identyfikator procesu przekazany przez MS Windows podczas uruchamiania programu
+	window_class.hIcon = 0;
+	window_class.hCursor = LoadCursor(0, IDC_ARROW);
+	window_class.hbrBackground = (HBRUSH)GetStockObject(GRAY_BRUSH);
+	window_class.lpszMenuName = "Menu";
+	window_class.lpszClassName = class_name;
 
-	//teraz rejestrujemy klasê okna g³ównego
-	RegisterClass(&main_class);
+	//teraz rejestrujemy klasÄ™ okna gÅ‚Ã³wnego
+	RegisterClass(&window_class);
 
-	window_handle = CreateWindow(class_name, "WZR-lab 2025/26 temat 3 - Nawigacja obliczeniowa - wersja h (jak Hubert)", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-		20, 10, 900, 750, NULL, NULL, hInstance, NULL);
+	/*tworzymy main_window gÅ‚Ã³wne
+	main_window bÄ™dzie miaÅ‚o zmienne rozmiary, listwÄ™ z tytuÅ‚em, menu systemowym
+	i przyciskami do zwijania do ikony i rozwijania na caÅ‚y ekran, po utworzeniu
+	bÄ™dzie widoczne na ekranie */
+	main_window = CreateWindow(class_name, "WZR 2025/26, temat 4, wersja e", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+		10, 10, 1400, 820, NULL, NULL, hInstance, NULL);
 
-	ShowWindow(window_handle, nCmdShow);
+
+	ShowWindow(main_window, nCmdShow);
 
 	//odswiezamy zawartosc okna
-	UpdateWindow(window_handle);
+	UpdateWindow(main_window);
 
-	// pobranie komunikatu z kolejki jeœli funkcja PeekMessage zwraca wartoœæ inn¹ ni¿ FALSE,
-	// w przeciwnym wypadku symulacja wirtualnego œwiata wraz z wizualizacj¹
-	ZeroMemory(&message, sizeof(message));
-	while (message.message != WM_QUIT)
+
+
+	// GÅÃ“WNA PÄ˜TLA PROGRAMU
+
+	// pobranie komunikatu z kolejki jeÅ›li funkcja PeekMessage zwraca wartoÅ›Ä‡ innÄ… niÅ¼ FALSE,
+	// w przeciwnym wypadku symulacja wirtualnego Å›wiata wraz z wizualizacjÄ…
+	ZeroMemory(&system_message, sizeof(system_message));
+	while (system_message.message != WM_QUIT)
 	{
-		if (PeekMessage(&message, NULL, 0U, 0U, PM_REMOVE))
+		if (PeekMessage(&system_message, NULL, 0U, 0U, PM_REMOVE))
 		{
-			TranslateMessage(&message);
-			DispatchMessage(&message);
+			TranslateMessage(&system_message);
+			DispatchMessage(&system_message);
 		}
 		else
 		{
-			VirtualWorldCycle();    // Cykl wirtualnego œwiata
-			InvalidateRect(window_handle, NULL, FALSE);
+			VirtualWorldCycle();    // Cykl wirtualnego Å›wiata
+			InvalidateRect(main_window, NULL, FALSE);
 		}
 	}
 
-	return (int)message.wParam;
+	return (int)system_message.wParam;
 }
 
-/********************************************************************
-FUNKCJA OKNA realizujaca przetwarzanie meldunków kierowanych do okna aplikacji*/
-LRESULT CALLBACK WndProc(HWND window_handle, UINT message_code, WPARAM wParam, LPARAM lParam)
+// ************************************************************************
+// ****    ObsÂ³uga klawiszy sÂ³uÂ¿Â¹cych do sterowania obiektami lub
+// ****    widokami 
+void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 {
 
-	switch (message_code)
+	int LCONTROL = GetKeyState(VK_LCONTROL);
+	int RCONTROL = GetKeyState(VK_RCONTROL);
+	int LALT = GetKeyState(VK_LMENU);
+	int RALT = GetKeyState(VK_RMENU);
+
+
+	switch (message_type)
 	{
-	case WM_CREATE:  //message wysy³any w momencie tworzenia okna
-	{
-
-		g_context = GetDC(window_handle);
-
-		srand((unsigned)time(NULL));
-		int result = GraphicsInitialisation(g_context);
-		if (result == 0)
-		{
-			printf("graphics window failed to be open\n");
-			//exit(1);
-		}
-
-		InteractionInitialisation();
-
-		SetTimer(window_handle, 1, 10, NULL);
-
-		time_start = clock();      // by czas liczyæ po utworzeniu okna i inicjalizacji 
-
-		return 0;
-	}
-
-
-	case WM_PAINT:
-	{
-		PAINTSTRUCT paint;
-		HDC context;
-		context = BeginPaint(window_handle, &paint);
-
-		DrawScene();
-		SwapBuffers(context);
-
-		EndPaint(window_handle, &paint);
-
-		return 0;
-	}
-
-	case WM_TIMER:
-
-		return 0;
-
-	case WM_SIZE:
-	{
-		int cx = LOWORD(lParam);
-		int cy = HIWORD(lParam);
-
-		WindowResize(cx, cy);
-
-		return 0;
-	}
-
-	case WM_DESTROY: //obowi¹zkowa obs³uga meldunku o zamkniêciu okna
-
-		EndOfInteraction();
-		EndOfGraphics();
-
-		ReleaseDC(window_handle, g_context);
-		KillTimer(window_handle, 1);
-
-		//LPDWORD lpExitCode;
-		DWORD ExitCode;
-		GetExitCodeThread(threadReciv, &ExitCode);
-		TerminateThread(threadReciv,ExitCode);
-		//ExitThread(ExitCode);
-
-		//Sleep(1000);
-
-		other_users_vehicles.clear();
-		
-
-		PostQuitMessage(0);
-		return 0;
 
 	case WM_LBUTTONDOWN: //reakcja na lewy przycisk myszki
 	{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		if (if_mouse_control)
-			my_vehicle->F = 45.0;        // si³a pchaj¹ca do przodu
+		if (mouse_control)
+			my_vehicle->F = my_vehicle->F_max;        // siÂ³a pchajÂ¹ca do przodu
+
 		break;
 	}
 	case WM_RBUTTONDOWN: //reakcja na prawy przycisk myszki
 	{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		if (if_mouse_control)
-			my_vehicle->F = -30.0;        // si³a pchaj¹ca do tylu
+		int LSHIFT = GetKeyState(VK_LSHIFT);   // sprawdzenie czy lewy Shift wciÅ›niÄ™ty, jeÅ›li tak, to LSHIFT == 1
+		int RSHIFT = GetKeyState(VK_RSHIFT);
+
+		if (mouse_control)
+			my_vehicle->F = -my_vehicle->F_max / 2;        // siÂ³a pchajÂ¹ca do tylu
+		else if (wParam & MK_SHIFT)                    // odznaczanie wszystkich obiektÃ³w   
+		{
+			for (long i = 0; i < terrain.number_of_selected_items; i++)
+				terrain.p[terrain.selected_items[i]].if_selected = 0;
+			terrain.number_of_selected_items = 0;
+		}
+		else                                          // zaznaczenie obiektÃ³w
+		{
+			RECT r;
+			//GetWindowRect(main_window,&r);
+			GetClientRect(main_window, &r);
+			//Vector3 w = Cursor3dCoordinates(x, r.bottom - r.top - y);
+			Vector3 w = terrain.Cursor3D_CoordinatesWithoutParallax(x, r.bottom - r.top - y);
+
+
+			//float radius = (w - point_click).length();
+			float min_dist = 1e10;
+			long index_min = -1;
+			bool if_movable_obj;
+			for (map<int, MovableObject*>::iterator it = network_vehicles.begin(); it != network_vehicles.end(); ++it)
+			{
+				if (it->second)
+				{
+					MovableObject *ob = it->second;
+					float xx, yy, zz;
+					ScreenCoordinates(&xx, &yy, &zz, ob->state.vPos);
+					yy = r.bottom - r.top - yy;
+					float odl_kw = (xx - x)*(xx - x) + (yy - y)*(yy - y);
+					if (min_dist > odl_kw)
+					{
+						min_dist = odl_kw;
+						index_min = ob->iID;
+						if_movable_obj = 1;
+					}
+				}
+			}
+		
+
+			// trzeba to przerobiÄ‡ na wersjÄ™ sektorowÄ…, gdyÅ¼ przedmiotÃ³w moÅ¼e byÄ‡ duÅ¼o!
+			// niestety nie jest to proste. 
+
+			//Item **wsk_prz = NULL;
+			//long liczba_prz_w_prom = terrain.ItemsInRadius(&wsk_prz, w,100);
+
+			for (long i = 0; i < terrain.number_of_items; i++)
+			{
+				float xx, yy, zz;
+				Vector3 placement;
+				if ((terrain.p[i].type == ITEM_EDGE) || (terrain.p[i].type == ITEM_WALL))
+				{
+					placement = (terrain.p[terrain.p[i].param_i[0]].vPos + terrain.p[terrain.p[i].param_i[1]].vPos) / 2;
+				}
+				else
+					placement = terrain.p[i].vPos;
+				ScreenCoordinates(&xx, &yy, &zz, placement);
+				yy = r.bottom - r.top - yy;
+				float odl_kw = (xx - x)*(xx - x) + (yy - y)*(yy - y);
+				if (min_dist > odl_kw)
+				{
+					min_dist = odl_kw;
+					index_min = i;
+					if_movable_obj = 0;
+				}
+			}
+
+			if (index_min > -1)
+			{
+				//fprintf(f,"zaznaczono przedmiot %d pol = (%f, %f, %f)\n",ind_min,terrain.p[ind_min].vPos.x,terrain.p[ind_min].vPos.y,terrain.p[ind_min].vPos.z);
+				//terrain.p[ind_min].if_selected = 1 - terrain.p[ind_min].if_selected;
+				if (if_movable_obj)
+				{
+					network_vehicles[index_min]->if_selected = 1 - network_vehicles[index_min]->if_selected;
+
+					if (network_vehicles[index_min]->if_selected)
+						sprintf(par_view.inscription2, "zaznaczono_ obiekt_ID_%d", network_vehicles[index_min]->iID);
+				}
+				else
+				{
+					terrain.SelectUnselectItemOrGroup(index_min);
+				}
+				//char lan[256];
+				//sprintf(lan, "klikniÃªto w przedmiot %d pol = (%f, %f, %f)\n",ind_min,terrain.p[ind_min].vPos.x,terrain.p[ind_min].vPos.y,terrain.p[ind_min].vPos.z);
+				//SetWindowText(main_window,lan);
+			}
+			Vector3 point_click = Cursor3dCoordinates(x, r.bottom - r.top - y);
+
+		}
+
 		break;
 	}
-	case WM_MBUTTONDOWN: //reakcja na œrodkowy przycisk myszki : uaktywnienie/dezaktywacja sterwania myszkowego
+	case WM_MBUTTONDOWN: //reakcja na Å“rodkowy przycisk myszki : uaktywnienie/dezaktywacja sterwania myszkowego
 	{
-		if_mouse_control = 1 - if_mouse_control;
-		if (if_mouse_control) my_vehicle->if_keep_steer_wheel = true;
-		else my_vehicle->if_keep_steer_wheel = false;
-
-		mouse_cursor_x = LOWORD(lParam);
-		mouse_cursor_y = HIWORD(lParam);
+		mouse_control = 1 - mouse_control;
+		cursor_x = LOWORD(lParam);
+		cursor_y = HIWORD(lParam);
 		break;
 	}
 	case WM_LBUTTONUP: //reakcja na puszczenie lewego przycisku myszki
 	{
-		if (if_mouse_control)
-			my_vehicle->F = 0.0;        // si³a pchaj¹ca do przodu
+		if (mouse_control)
+			my_vehicle->F = 0.0;        // siÂ³a pchajÂ¹ca do przodu
 		break;
 	}
 	case WM_RBUTTONUP: //reakcja na puszczenie lewy przycisk myszki
 	{
-		if (if_mouse_control)
-			my_vehicle->F = 0.0;        // si³a pchaj¹ca do przodu
+		if (mouse_control)
+			my_vehicle->F = 0.0;        // siÂ³a pchajÂ¹ca do przodu
 		break;
 	}
 	case WM_MOUSEMOVE:
 	{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		if (if_mouse_control)
+		if (mouse_control)
 		{
-			float wheel_angle = (float)(mouse_cursor_x - x) / 200;
-			if (wheel_angle > my_vehicle->wheel_angle_max) wheel_angle = my_vehicle->wheel_angle_max;
-			if (wheel_angle < -my_vehicle->wheel_angle_max) wheel_angle = -my_vehicle->wheel_angle_max;
-			my_vehicle->state.wheel_angle = wheel_angle;
-			//my_vehicle->turning_speed = (float)(mouse_cursor_x - x) / 20;
+			float wheel_turn_angle = (float)(cursor_x - x) / 20;
+			if (wheel_turn_angle > 45) wheel_turn_angle = 45;
+			if (wheel_turn_angle < -45) wheel_turn_angle = -45;
+			my_vehicle->state.wheel_turn_angle = PI*wheel_turn_angle / 180;
 		}
+		break;
+	}
+	case WM_MOUSEWHEEL:     // ruch kÃ³Â³kiem myszy -> przybliÂ¿anie, oddalanie widoku
+	{
+		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);  // dodatni do przodu, ujemny do tyÂ³u
+		//fprintf(f,"zDelta = %d\n",zDelta);          // zwykle +-120, jak siÃª bardzo szybko zakrÃªci to czasmi wyjdzie +-240
+		if (zDelta > 0){
+			if (par_view.distance > 0.5) par_view.distance /= 1.2;
+			else par_view.distance = 0;
+		}
+		else {
+			if (par_view.distance > 0) par_view.distance *= 1.2;
+			else par_view.distance = 0.5;
+		}
+
 		break;
 	}
 	case WM_KEYDOWN:
@@ -503,135 +590,270 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message_code, WPARAM wParam, L
 		{
 		case VK_SHIFT:
 		{
-			if_SHIFT_pressed = 1;
+			SHIFT_pressed = 1;
 			break;
 		}
+		case VK_CONTROL:
+		{
+			CTRL_pressed = 1;
+			break;
+		}
+		case VK_MENU:
+		{
+			ALT_pressed = 1;
+			break;
+		}
+
 		case VK_SPACE:
 		{
-			my_vehicle->breaking_factor = 1.0;       // stopieñ hamowania (reszta zale¿y od si³y docisku i wsp. tarcia)
-			break;                       // 1.0 to maksymalny stopieñ (np. zablokowanie kó³)
+			my_vehicle->breaking_degree = 1.0;       // stopieÃ± hamowania (reszta zaleÂ¿y od siÂ³y docisku i wsp. tarcia)
+			break;                       // 1.0 to maksymalny stopieÃ± (np. zablokowanie kÃ³Â³)
 		}
 		case VK_UP:
 		{
-			my_vehicle->F = 140.0;        // si³a pchaj¹ca do przodu
+			if (CTRL_pressed && par_view.top_view)
+				par_view.shift_to_bottom += par_view.distance / 2;       // przesuniÄ™cie widoku z kamery w gÃ³rÄ™
+			else
+				my_vehicle->F = my_vehicle->F_max;        // siÂ³a pchajÂ¹ca do przodu
 			break;
 		}
 		case VK_DOWN:
 		{
-			my_vehicle->F = -70.0;
+			if (CTRL_pressed && par_view.top_view)
+				par_view.shift_to_bottom -= par_view.distance / 2;       // przesuniÄ™cie widoku z kamery w dÃ³Å‚ 
+			else
+				my_vehicle->F = -my_vehicle->F_max / 2;        // sila pchajaca do tylu
 			break;
 		}
 		case VK_LEFT:
 		{
-			if (my_vehicle->turning_speed < 0){
-				my_vehicle->turning_speed = 0;
-				my_vehicle->if_keep_steer_wheel = true;
-			}
-			else{
-				if (if_SHIFT_pressed) my_vehicle->turning_speed = 0.5;
-				else my_vehicle->turning_speed = 0.25 / 8;
+			if (CTRL_pressed && par_view.top_view)
+				par_view.shift_to_right += par_view.distance / 2;
+			else
+			{
+				if (my_vehicle->steer_wheel_speed < 0) {
+					my_vehicle->steer_wheel_speed = 0;
+					my_vehicle->if_keep_steer_wheel = true;
+				}
+				else {
+					if (SHIFT_pressed) my_vehicle->steer_wheel_speed = 0.5;
+					else my_vehicle->steer_wheel_speed = 0.5 / 4;
+				}
 			}
 
 			break;
 		}
 		case VK_RIGHT:
 		{
-			if (my_vehicle->turning_speed > 0){
-				my_vehicle->turning_speed = 0;
-				my_vehicle->if_keep_steer_wheel = true;
-			}
-			else{
-				if (if_SHIFT_pressed) my_vehicle->turning_speed = -0.5;
-				else my_vehicle->turning_speed = -0.25 / 8;
-			}
-			break;
-		}
-		case 'I':   // wypisywanie nr ID
-		{
-			if_ID_visible = 1 - if_ID_visible;
-			break;
-		}
-		case 'W':   // cam_distance widoku
-		{
-			//cam_pos = cam_pos - cam_direct*0.3;
-			if (view_parameters.cam_distance > 0.5) view_parameters.cam_distance /= 1.2;
-			else view_parameters.cam_distance = 0;
-			break;
-		}
-		case 'S':   // przybli¿enie widoku
-		{
-			//cam_pos = cam_pos + cam_direct*0.3; 
-			if (view_parameters.cam_distance > 0) view_parameters.cam_distance *= 1.2;
-			else view_parameters.cam_distance = 0.5;
-			break;
-		}
-		case 'Q':   // widok z góry
-		{
-			if (view_parameters.tracking) break;
-			view_parameters.top_view = 1 - view_parameters.top_view;
-			if (view_parameters.top_view)
-			{
-				view_parameters.cam_pos_1 = view_parameters.cam_pos; view_parameters.cam_direct_1 = view_parameters.cam_direct; view_parameters.cam_vertical_1 = view_parameters.cam_vertical;
-				view_parameters.cam_distance_1 = view_parameters.cam_distance; view_parameters.cam_angle_1 = view_parameters.cam_angle;
-				view_parameters.cam_pos = view_parameters.cam_pos_2; view_parameters.cam_direct = view_parameters.cam_direct_2; view_parameters.cam_vertical = view_parameters.cam_vertical_2;
-				view_parameters.cam_distance = view_parameters.cam_distance_2; view_parameters.cam_angle = view_parameters.cam_angle_2;
-			}
+			if (CTRL_pressed && par_view.top_view)
+				par_view.shift_to_right -= par_view.distance / 2;
 			else
 			{
-				view_parameters.cam_pos_2 = view_parameters.cam_pos; view_parameters.cam_direct_2 = view_parameters.cam_direct; view_parameters.cam_vertical_2 = view_parameters.cam_vertical;
-				view_parameters.cam_distance_2 = view_parameters.cam_distance; view_parameters.cam_angle_2 = view_parameters.cam_angle;
-				view_parameters.cam_pos = view_parameters.cam_pos_1; view_parameters.cam_direct = view_parameters.cam_direct_1; view_parameters.cam_vertical = view_parameters.cam_vertical_1;
-				view_parameters.cam_distance = view_parameters.cam_distance_1; view_parameters.cam_angle = view_parameters.cam_angle_1;
+				if (my_vehicle->steer_wheel_speed > 0) {
+					my_vehicle->steer_wheel_speed = 0;
+					my_vehicle->if_keep_steer_wheel = true;
+				}
+				else {
+					if (SHIFT_pressed) my_vehicle->steer_wheel_speed = -0.5;
+					else my_vehicle->steer_wheel_speed = -0.5 / 4;
+				}
 			}
 			break;
 		}
-		case 'E':   // obrót kamery ku górze (wzglêdem lokalnej osi z)
+		case VK_HOME:
 		{
-			view_parameters.cam_angle += PI * 5 / 180;
+			if (CTRL_pressed && par_view.top_view)
+				par_view.shift_to_right = par_view.shift_to_bottom = 0;
+
 			break;
 		}
-		case 'D':   // obrót kamery ku do³owi (wzglêdem lokalnej osi z)
+		case 'W':   // przybliÂ¿enie widoku
 		{
-			view_parameters.cam_angle -= PI * 5 / 180;
+			//initial_camera_position = initial_camera_position - initial_camera_direction*0.3;
+			if (par_view.distance > 0.5)par_view.distance /= 1.2;
+			else par_view.distance = 0;
 			break;
 		}
-		case 'A':   // w³¹czanie, wy³¹czanie trybu œledzenia obiektu
+		case 'S':   // distance widoku
 		{
-			view_parameters.tracking = 1 - view_parameters.tracking;
-			if (view_parameters.tracking)
-			{
-				view_parameters.cam_distance = view_parameters.cam_distance_3; view_parameters.cam_angle = view_parameters.cam_angle_3;
-			}
+			//initial_camera_position = initial_camera_position + initial_camera_direction*0.3; 
+			if (par_view.distance > 0) par_view.distance *= 1.2;
+			else par_view.distance = 0.5;
+			break;
+		}
+		case 'Q':   // widok z gÃ³ry
+		{
+			par_view.top_view = 1 - par_view.top_view;
+			if (par_view.top_view)
+				SetWindowText(main_window, "WÅ‚Ä…czono widok z gÃ³ry!");
 			else
+				SetWindowText(main_window, "WyÅ‚Ä…czono widok z gÃ³ry.");
+			break;
+		}
+		case 'E':   // obrÃ³t kamery ku gÃ³rze (wzglÃªdem lokalnej osi z)
+		{
+			par_view.cam_angle_z += PI * 5 / 180;
+			break;
+		}
+		case 'D':   // obrÃ³t kamery ku doÂ³owi (wzglÃªdem lokalnej osi z)
+		{
+			par_view.cam_angle_z -= PI * 5 / 180;
+			break;
+		}
+		case 'A':   // wÂ³Â¹czanie, wyÂ³Â¹czanie trybu Å“ledzenia obiektu
+		{
+			par_view.tracking = 1 - par_view.tracking;
+			break;
+		}
+		case 'Z':   // zoom - zmniejszenie kÂ¹ta widzenia
+		{
+			par_view.zoom /= 1.1;
+			RECT rc;
+			GetClientRect(main_window, &rc);
+			WindowSizeChange(rc.right - rc.left, rc.bottom - rc.top);
+			break;
+		}
+		case 'X':   // zoom - zwiÃªkszenie kÂ¹ta widzenia
+		{
+			par_view.zoom *= 1.1;
+			RECT rc;
+			GetClientRect(main_window, &rc);
+			WindowSizeChange(rc.right - rc.left, rc.bottom - rc.top);
+			break;
+		}
+
+		case 'F':  // przekazanie 10 kg paliwa pojazdom zaznaczonym
+		{
+			for (map<int, MovableObject*>::iterator it = network_vehicles.begin(); it != network_vehicles.end(); ++it)
 			{
-				view_parameters.cam_distance_3 = view_parameters.cam_distance; view_parameters.cam_angle_3 = view_parameters.cam_angle;
-				view_parameters.top_view = 0;
-				view_parameters.cam_pos = view_parameters.cam_pos_1; view_parameters.cam_direct = view_parameters.cam_direct_1; view_parameters.cam_vertical = view_parameters.cam_vertical_1;
-				view_parameters.cam_distance = view_parameters.cam_distance_1; view_parameters.cam_angle = view_parameters.cam_angle_1;
+				if (it->second)
+				{
+					MovableObject *ob = it->second;
+					if (ob->if_selected)
+						float ilosc_p = TransferSending(ob->iID, FUEL, 10);
+				}
 			}
 			break;
 		}
-		case 'Z':   // zoom - zmniejszenie k¹ta widzenia
+		case 'G':  // przekazanie 100 jednostek gotowki pojazdom zaznaczonym
 		{
-			view_parameters.zoom /= 1.1;
-			RECT rc;
-			GetClientRect(window_handle, &rc);
-			WindowResize(rc.right - rc.left, rc.bottom - rc.top);
+			for (map<int, MovableObject*>::iterator it = network_vehicles.begin(); it != network_vehicles.end(); ++it)
+			{
+				if (it->second)
+				{
+					MovableObject *ob = it->second;
+					if (ob->if_selected)
+						float ilosc_p = TransferSending(ob->iID, MONEY, 100);
+				}
+			}
 			break;
 		}
-		case 'X':   // zoom - zwiêkszenie k¹ta widzenia
+		
+		case 'L':     // rozpoczÄ™cie zaznaczania metodÄ… lasso
+			L_pressed = true;
+			break;
+	
+
+		} // switch po klawiszach
+
+		break;
+	}
+
+	case WM_KEYUP:
+	{
+		switch (LOWORD(wParam))
 		{
-			view_parameters.zoom *= 1.1;
-			RECT rc;
-			GetClientRect(window_handle, &rc);
-			WindowResize(rc.right - rc.left, rc.bottom - rc.top);
+		case VK_SHIFT:
+		{
+			SHIFT_pressed = 0;
 			break;
 		}
-		case 'C':         // prze³¹cznie widoku z kokpitu pojazdu u¿ytkownka i jego cienia sieciowego
+		case VK_CONTROL:
 		{
-			view_parameters.network_shadow_view = 1 - view_parameters.network_shadow_view;
+			CTRL_pressed = 0;
 			break;
 		}
+		case VK_MENU:
+		{
+			ALT_pressed = 0;
+			break;
+		}
+		case 'L':     // zakonczenie zaznaczania metodÄ… lasso
+			L_pressed = false;
+			break;
+		case VK_SPACE:
+		{
+			my_vehicle->breaking_degree = 0.0;
+			break;
+		}
+		case VK_UP:
+		{
+			my_vehicle->F = 0.0;
+
+			break;
+		}
+		case VK_DOWN:
+		{
+			my_vehicle->F = 0.0;
+			break;
+		}
+		case VK_LEFT:
+		{
+			if (my_vehicle->if_keep_steer_wheel) my_vehicle->steer_wheel_speed = -0.5 / 4;
+			else my_vehicle->steer_wheel_speed = 0;
+			my_vehicle->if_keep_steer_wheel = false;
+			break;
+		}
+		case VK_RIGHT:
+		{
+			if (my_vehicle->if_keep_steer_wheel) my_vehicle->steer_wheel_speed = 0.5 / 4;
+			else my_vehicle->steer_wheel_speed = 0;
+			my_vehicle->if_keep_steer_wheel = false;
+			break;
+		}
+
+		}
+
+		break;
+	}
+
+	} // switch po komunikatach
+}
+
+/********************************************************************
+FUNKCJA OKNA realizujaca przetwarzanie meldunkÃ³w kierowanych do okna aplikacji*/
+LRESULT CALLBACK WndProc(HWND main_window, UINT message_type, WPARAM wParam, LPARAM lParam)
+{
+
+	// PONIÅ»SZA INSTRUKCJA DEFINIUJE REAKCJE APLIKACJI NA POSZCZEGÃ“LNE MELDUNKI 
+
+	MessagesHandling(message_type, wParam, lParam);
+
+	switch (message_type)
+	{
+	case WM_CREATE:  //system_message wysyÅ‚any w momencie tworzenia okna
+	{
+
+		g_context = GetDC(main_window);
+
+		srand((unsigned)time(NULL));
+		int result = GraphicsInitialization(g_context);
+		if (result == 0)
+		{
+			printf("nie udalo sie otworzyc okna graficznego\n");
+			//exit(1);
+		}
+
+		InteractionInitialisation();
+
+		SetTimer(main_window, 1, 10, NULL);
+
+		return 0;
+	}
+	case WM_KEYDOWN:
+	{
+		switch (LOWORD(wParam))
+		{
 		case VK_F1:  // wywolanie systemu pomocy
 		{
 			char lan[1024], lan_bie[1024];
@@ -657,67 +879,70 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message_code, WPARAM wParam, L
 			}
 			break;
 		}
-		case VK_ESCAPE:
+		case VK_F4:  // wÅ‚Ä…czanie/ wyÅ‚Ä…czanie trybu edycji terrainu
 		{
-			SendMessage(window_handle, WM_DESTROY, 0, 0);
+			terrain_edition_mode = 1 - terrain_edition_mode;
+			if (terrain_edition_mode)
+				SetWindowText(main_window, "TRYB EDYCJI TERENU F2-SaveMapToFile, F1-pomoc");
+			else 
+				SetWindowText(main_window, "WYJSCIE Z TRYBU EDYCJI TERENU");
 			break;
 		}
-		} // switch po klawiszach
-
-		break;
+		case VK_ESCAPE:   // wyjÅ›cie z programu
+		{
+			SendMessage(main_window, WM_DESTROY, 0, 0);
+			break;
+		}
+		}
+		return 0;
 	}
-	case WM_KEYUP:
+
+	case WM_PAINT:
 	{
-		switch (LOWORD(wParam))
-		{
-		case VK_SHIFT:
-		{
-			if_SHIFT_pressed = 0;
-			break;
-		}
-		case VK_SPACE:
-		{
-			my_vehicle->breaking_factor = 0.0;
-			break;
-		}
-		case VK_UP:
-		{
-			my_vehicle->F = 0.0;
-			break;
-		}
-		case VK_DOWN:
-		{
-			my_vehicle->F = 0.0;
-			break;
-		}
-		case VK_LEFT:
-		{
-			my_vehicle->Fb = 0.00;
-			//my_vehicle->state.wheel_angle = 0;
-			if (my_vehicle->if_keep_steer_wheel) my_vehicle->turning_speed = -0.25/8;
-			else my_vehicle->turning_speed = 0; 
-			my_vehicle->if_keep_steer_wheel = false;
-			break;
-		}
-		case VK_RIGHT:
-		{
-			my_vehicle->Fb = 0.00;
-			//my_vehicle->state.wheel_angle = 0;
-			if (my_vehicle->if_keep_steer_wheel) my_vehicle->turning_speed = 0.25 / 8;
-			else my_vehicle->turning_speed = 0;
-			my_vehicle->if_keep_steer_wheel = false;
-			break;
-		}
+		PAINTSTRUCT paint;
+		HDC context;
+		context = BeginPaint(main_window, &paint);
 
-		}
+		DrawScene();
+		SwapBuffers(context);
 
-		break;
+		EndPaint(main_window, &paint);
+
+
+
+		return 0;
 	}
 
-	default: //statedardowa obs³uga pozosta³ych meldunków
-		return DefWindowProc(window_handle, message_code, wParam, lParam);
+	case WM_TIMER:
+
+		return 0;
+
+	case WM_SIZE:
+	{
+		int cx = LOWORD(lParam);
+		int cy = HIWORD(lParam);
+
+		WindowSizeChange(cx, cy);
+
+		return 0;
 	}
 
+	case WM_DESTROY: //obowiÄ…zkowa obsÅ‚uga meldunku o zamkniÄ™ciu okna
+		if (lParam == 100)
+			MessageBox(main_window, "Jest zbyt pÃ³Åºno na doÅ‚Ä…czenie do wirtualnego Å›wiata. Trzeba to zrobiÄ‡ zanim inni uczestnicy zmieniÄ… jego state.", "ZamkniÄ™cie programu", MB_OK);
+
+		EndOfInteraction();
+		EndOfGraphics();
+
+		ReleaseDC(main_window, g_context);
+		KillTimer(main_window, 1);
+
+		PostQuitMessage(0);
+		return 0;
+
+	default: //standardowa obsÅ‚uga pozostaÅ‚ych meldunkÃ³w
+		return DefWindowProc(main_window, message_type, wParam, lParam);
+	}
 
 }
 
