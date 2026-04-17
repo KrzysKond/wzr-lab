@@ -155,9 +155,9 @@ float AcceptOfferAndGiveFuel(int auctioneer_id, float fuel_amount_proposed)
 {
 	Frame frame;
 	frame.frame_type = AUCTION_RESPONSE;
-	frame.iID_receiver = auctioneer_id;
+	frame.iID_receiver = active_auction.player_whos_buying;
 	frame.transfer_type = FUEL;
-	frame.transfer_value = fuel_amount_proposed;
+	frame.transfer_value = active_auction.money_amount;
 	frame.proposed_fueld_amount = fuel_amount_proposed;
 	frame.iID = my_vehicle->iID;
 	if (my_vehicle->state.amount_of_fuel < fuel_amount_proposed)
@@ -476,7 +476,7 @@ void VirtualWorldCycle()
 		SET_AUCTION_TEXT("Gracz %d oferuje %f paliwa za %f");
 
 
-		SET_AUX_TEXT("Twoja oferta: %f za %f.", my_vehicle->proposed_money_amount, active_auction.fuel_amount)
+		SET_AUX_TEXT("Twoja oferta: %f za %f.", my_vehicle->proposed_money_amount, active_auction.fuel_amount);
 	}
 
 	if (responded_to_auction) {
@@ -494,7 +494,7 @@ void VirtualWorldCycle()
 
 	if (auction_offer_responded) {
 		if (try_buy_auction) {
-			AcceptOfferAndGiveFuel(my_vehicle->iID, my_vehicle->proposed_money_amount, active_auction.fuel_amount);
+			AcceptOfferAndGiveFuel(my_vehicle->iID, active_auction.fuel_amount);
 			SET_AUX_TEXT("zakonczono_transakcje");
 		}
 		else {
