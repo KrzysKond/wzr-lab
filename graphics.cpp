@@ -148,6 +148,18 @@ void DrawScene()
 	glPrint("%s", par_view.inscription1);
 	glRasterPos2f(4.0, -6.0);
 	glPrint("%s", par_view.inscription2);
+	glRasterPos2f(2.0, -8.0);
+	glPrint("%s", par_view.offer_text);
+	glRasterPos2f(2.0, -12.0);
+	glPrint("%s", par_view.auction_text);
+
+	glRasterPos2f(2.0, -14.0);
+	glPrint("%s", par_view.info_text);
+	glRasterPos2f(15.0, -11.0);
+	glPrint("%s", par_view.aux_text);
+
+	glRasterPos2f(15.0, -5.0);
+	glPrint("%s", par_view.team_text);
 	glLoadIdentity();
 
 

@@ -41,6 +41,8 @@ HANDLE threadReciv;                 // uchwyt w¹tku odbioru komunikatów
 extern HWND main_window;
 CRITICAL_SECTION m_cs;               // do synchronizacji wątków
 
+int chosen_player = 0;
+
 bool SHIFT_pressed = 0;
 bool CTRL_pressed = 0;
 bool ALT_pressed = 0;
@@ -53,6 +55,21 @@ extern ViewParameters par_view;
 
 bool mouse_control = 0;                   // sterowanie pojazdem za pomoc¹ myszki
 int cursor_x, cursor_y;                         // polo¿enie kursora myszki w chwili w³¹czenia sterowania
+bool try_to_advertise_offer = false;
+
+template<typename... Args>
+inline int SafeSprintf(char* buffer, size_t buffer_size, const char* format, Args... args) {
+	memset(buffer, 0, buffer_size);
+	return _snprintf(buffer, buffer_size - 1, format, args...);
+}
+#define SAFE_SPRINTF(buf, fmt, ...) SafeSprintf(buf, 512, fmt, __VA_ARGS__)
+
+#define SET_INSCRIPTION1(fmt, ...) SafeSprintf(par_view.inscription1, 512, fmt, __VA_ARGS__)
+#define SET_INSCRIPTION2(fmt, ...) SafeSprintf(par_view.inscription2, 512, fmt, __VA_ARGS__)
+#define SET_OFFER_TEXT(fmt, ...) SafeSprintf(par_view.offer_text, 512, fmt, __VA_ARGS__)
+#define SET_AUCTION_TEXT(fmt, ...) SafeSprintf(par_view.auction_text, 512, fmt, __VA_ARGS__)
+#define SET_INFO_TEXT(fmt, ...) SafeSprintf(par_view.info_text, 512, fmt, __VA_ARGS__)
+#define SET_AUX_TEXT(fmt, ...) SafeSprintf(par_view.aux_text, 512, fmt, __VA_ARGS__)
 
 extern float TransferSending(int ID_receiver, int transfer_type, float transfer_value);
 
@@ -76,6 +93,7 @@ struct Frame
 
 	int transfer_type;         // gotówka, paliwo
 	float transfer_value;      // iloœæ gotówki lub paliwa 
+	float proposed_fueld_amount;
 	int team_number;
 
 	long existing_time;        // czas jaki uplyn¹³ od uruchomienia programu
@@ -111,6 +129,27 @@ float TransferSending(int ID_receiver, int transfer_type, float transfer_value)
 		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
 
 	return frame.transfer_value;
+}
+
+float AdvertiseOffer(int my_id, float transfer_value_proposed, float fueld_proposed)
+{
+	for (auto& pair : network_vehicles) {
+		int ID_receiver = pair.first;
+		if (ID_receiver != my_id) {
+			Frame frame;
+			frame.frame_type = TRANSFER;
+			frame.iID_receiver = ID_receiver;
+			frame.transfer_type = MONEY;
+			frame.transfer_value = transfer_value_proposed;
+			frame.proposed_fueld_amount = fueld_proposed;
+			frame.iID = my_vehicle->iID;
+
+			int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
+			return frame.transfer_value;
+		}
+	}
+	SET_INFO_TEXT("Stworzono propozycje transakcji: %f", transfer_value_proposed);
 }
 
 //******************************************
@@ -323,6 +362,11 @@ void VirtualWorldCycle()
 		my_vehicle->number_of_renewed_item = -1;
 	}
 
+
+	if (try_to_advertise_offer) {
+		AdvertiseOffer(my_vehicle->iID, my_vehicle->proposed_money_amount, my_vehicle->proposed_fuel_amount);
+		try_to_advertise_offer = false;
+	}
 }
 
 // *****************************************************************
@@ -383,6 +427,13 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	main_window = CreateWindow(class_name, "WZR 2025/26, temat 4, wersja e", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
 		10, 10, 1400, 820, NULL, NULL, hInstance, NULL);
 
+
+	SET_INSCRIPTION1("inscription1");
+	SET_INSCRIPTION2("inscription2");
+	SET_OFFER_TEXT("offer_text");
+	SET_AUCTION_TEXT("auction_text");
+	SET_INFO_TEXT("info_text");
+	SET_AUX_TEXT("aux_text");
 
 	ShowWindow(main_window, nCmdShow);
 
@@ -667,6 +718,55 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 			break;
 		}
+
+		case 'N':   // przybli¿enie widoku
+		
+			chosen_player = (chosen_player - 1) % (network_vehicles.size() + 1);
+			SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
+			break;
+		}
+
+		case 'M':   // przybli¿enie widoku
+		{
+			chosen_player = (chosen_player + 1) % (network_vehicles.size() + 1);
+			SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
+			break;
+		}
+
+		case 'K':   // przybli¿enie widoku
+				{
+			my_vehicle->proposed_fuel_amount = max(my_vehicle->proposed_fuel_amount - 10, 0);
+			SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
+			break;
+		}
+
+		case 'L':   // przybli¿enie widoku
+		{
+			my_vehicle->proposed_fuel_amount = min(my_vehicle->proposed_fuel_amount + 10, my_vehicle->state.amount_of_fuel);
+			SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
+			break;
+		}
+
+		case 'O':   // przybli¿enie widoku
+		{
+			my_vehicle->proposed_money_amount = max(my_vehicle->proposed_money_amount - 10, 0);
+			SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
+			break;
+		}
+
+		case 'P':   // przybli¿enie widoku
+		{
+			my_vehicle->proposed_money_amount = min(my_vehicle->proposed_money_amount + 10, my_vehicle->state.money);
+			SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
+			break;
+		}
+
+		case 'T':   // przybli¿enie widoku
+		{
+			try_to_advertise_offer = true;
+			break;
+		}
+
 		case 'W':   // przybli¿enie widoku
 		{
 			//initial_camera_position = initial_camera_position - initial_camera_direction*0.3;
@@ -749,7 +849,8 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		
-		case 'L':     // rozpoczęcie zaznaczania metodą lasso
+		case 'V':     // rozpoczęcie zaznaczania metodą lasso
+		{
 			L_pressed = true;
 			break;
 	

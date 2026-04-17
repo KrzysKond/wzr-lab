@@ -67,6 +67,10 @@ public:
 	float time_of_simulation;     // czas sumaryczny symulacji obiektu   
 	Terrain *terrain;             // wskaŸnik do terrainu, do którego przypisany jest obiekt
 
+
+	float proposed_money_amount = 40;
+	float proposed_fuel_amount = 3;
+
 public:
 	MovableObject(Terrain *t);          // konstruktor
 	~MovableObject();
