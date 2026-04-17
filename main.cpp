@@ -753,55 +753,6 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 				break;
 			}
-
-			case 'N':   // przybli¿enie widoku
-			{
-				chosen_player = (chosen_player - 1) % (network_vehicles.size() + 1);
-				SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
-				break;
-			}
-
-			case 'M':   // przybli¿enie widoku
-			{
-				chosen_player = (chosen_player + 1) % (network_vehicles.size() + 1);
-				SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
-				break;
-			}
-
-			case 'K':   // przybli¿enie widoku
-			{
-				my_vehicle->proposed_fuel_amount = max(my_vehicle->proposed_fuel_amount - 1, 0);
-				SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
-				break;
-			}
-
-			case 'L':   // przybli¿enie widoku
-			{
-				my_vehicle->proposed_fuel_amount = min(my_vehicle->proposed_fuel_amount + 1, my_vehicle->state.amount_of_fuel);
-				SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
-				break;
-			}
-
-			case 'O':   // przybli¿enie widoku
-			{
-				my_vehicle->proposed_money_amount = max(my_vehicle->proposed_money_amount - 10, 0);
-				SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
-				break;
-			}
-
-			case 'P':   // przybli¿enie widoku
-			{
-				my_vehicle->proposed_money_amount = min(my_vehicle->proposed_money_amount + 10, my_vehicle->state.money);
-				SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
-				break;
-			}
-
-			case 'T':   // przybli¿enie widoku
-			{
-				try_to_advertise_offer = true;
-				break;
-			}
-
 			case 'W':   // przybli¿enie widoku
 			{
 				//initial_camera_position = initial_camera_position - initial_camera_direction*0.3;
@@ -884,59 +835,112 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 				break;
 			}
 
-			break;
+			//case 'L':     // rozpoczęcie zaznaczania metodą lasso
+			//{
+			//	L_pressed = true;
+			//	break;
+
+
+			//} // switch po klawiszach
+
+			case 'N':   // przybli¿enie widoku
+			{
+				chosen_player = (chosen_player - 1) % (network_vehicles.size() + 1);
+				SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
+				break;
 			}
+
+			case 'M':   // przybli¿enie widoku
+			{
+				chosen_player = (chosen_player + 1) % (network_vehicles.size() + 1);
+				SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
+				break;
+			}
+
+			case 'K':   // przybli¿enie widoku
+			{
+				my_vehicle->proposed_fuel_amount = max(my_vehicle->proposed_fuel_amount - 1, 0);
+				SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
+				break;
+			}
+
+			case 'L':   // przybli¿enie widoku
+			{
+				my_vehicle->proposed_fuel_amount = min(my_vehicle->proposed_fuel_amount + 1, my_vehicle->state.amount_of_fuel);
+				SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
+				break;
+			}
+
+			case 'O':   // przybli¿enie widoku
+			{
+				my_vehicle->proposed_money_amount = max(my_vehicle->proposed_money_amount - 10, 0);
+				SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
+				break;
+			}
+
+			case 'P':   // przybli¿enie widoku
+			{
+				my_vehicle->proposed_money_amount = min(my_vehicle->proposed_money_amount + 10, my_vehicle->state.money);
+				SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
+				break;
+			}
+		}
+		break;
 	}
 
 	case WM_KEYUP:
 	{
 		switch (LOWORD(wParam))
 		{
-		case VK_SHIFT:
-		{
-			SHIFT_pressed = 0;
-			break;
-		}
-		case VK_CONTROL:
-		{
-			CTRL_pressed = 0;
-			break;
-		}
-		case VK_MENU:
-		{
-			ALT_pressed = 0;
-			break;
-		}
-		case VK_SPACE:
-		{
-			my_vehicle->breaking_degree = 0.0;
-			break;
-		}
-		case VK_UP:
-		{
-			my_vehicle->F = 0.0;
+			case VK_SHIFT:
+			{
+				SHIFT_pressed = 0;
+				break;
+			}
+			case VK_CONTROL:
+			{
+				CTRL_pressed = 0;
+				break;
+			}
+			case VK_MENU:
+			{
+				ALT_pressed = 0;
+				break;
+			}
+			case VK_SPACE:
+			{
+				my_vehicle->breaking_degree = 0.0;
+				break;
+			}
+			case VK_UP:
+			{
+				my_vehicle->F = 0.0;
 
-			break;
+				break;
+			}
+			case VK_DOWN:
+			{
+				my_vehicle->F = 0.0;
+				break;
+			}
+			case VK_LEFT:
+			{
+				if (my_vehicle->if_keep_steer_wheel) my_vehicle->steer_wheel_speed = -0.5 / 4;
+				else my_vehicle->steer_wheel_speed = 0;
+				my_vehicle->if_keep_steer_wheel = false;
+				break;
+			}
+			case VK_RIGHT:
+			{
+				if (my_vehicle->if_keep_steer_wheel) my_vehicle->steer_wheel_speed = 0.5 / 4;
+				else my_vehicle->steer_wheel_speed = 0;
+				my_vehicle->if_keep_steer_wheel = false;
+				break;
+			}
+
 		}
-		case VK_DOWN:
-		{
-			my_vehicle->F = 0.0;
-			break;
-		}
-		case VK_LEFT:
-		{
-			if (my_vehicle->if_keep_steer_wheel) my_vehicle->steer_wheel_speed = -0.5 / 4;
-			else my_vehicle->steer_wheel_speed = 0;
-			my_vehicle->if_keep_steer_wheel = false;
-			break;
-		}
-		case VK_RIGHT:
-		{
-			if (my_vehicle->if_keep_steer_wheel) my_vehicle->steer_wheel_speed = 0.5 / 4;
-			else my_vehicle->steer_wheel_speed = 0;
-			my_vehicle->if_keep_steer_wheel = false;
-			break;
-		}
+
+		break;
 	}
 
 	} // switch po komunikatach
