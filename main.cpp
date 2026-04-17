@@ -22,9 +22,15 @@ using namespace std;
 bool if_different_skills = true;          // czy zró¿nicowanie umiejêtnoœci (dla ka¿dego pojazdu losowane s¹ umiejêtnoœci
 // zbierania gotówki i paliwa)
 
-FILE *f = fopen("WZR_log.txt", "w");     // plik do zapisu informacji testowych
+FILE* f = fopen("WZR_log.txt", "w");     // plik do zapisu informacji testowych
 
-MovableObject *my_vehicle;             // Object przypisany do tej aplikacji
+struct Auction {
+	float fuel_amount = 0;
+	float money_amount = 0;
+};
+Auction active_auction{};
+
+MovableObject* my_vehicle;             // Object przypisany do tej aplikacji
 
 Terrain terrain;
 map<int, MovableObject*> network_vehicles;
@@ -34,8 +40,8 @@ long VW_cycle_time, counter_of_simulations;     // zmienne pomocnicze potrzebne 
 long start_time = clock();          // czas od poczatku dzialania aplikacji  
 long group_existing_time = clock();    // czas od pocz¹tku istnienia grupy roboczej (czas od uruchom. pierwszej aplikacji)      
 
-multicast_net *multi_reciv;         // wsk do obiektu zajmujacego sie odbiorem komunikatow
-multicast_net *multi_send;          //   -||-  wysylaniem komunikatow
+multicast_net* multi_reciv;         // wsk do obiektu zajmujacego sie odbiorem komunikatow
+multicast_net* multi_send;          //   -||-  wysylaniem komunikatow
 
 HANDLE threadReciv;                 // uchwyt w¹tku odbioru komunikatów
 extern HWND main_window;
@@ -56,6 +62,9 @@ extern ViewParameters par_view;
 bool mouse_control = 0;                   // sterowanie pojazdem za pomoc¹ myszki
 int cursor_x, cursor_y;                         // polo¿enie kursora myszki w chwili w³¹czenia sterowania
 bool try_to_advertise_offer = false;
+bool responded_to_auction = false;
+bool try_buy_auction = false;
+bool try_reject_auction = false;
 bool has_active_auction = false;
 
 template<typename... Args>
@@ -84,14 +93,14 @@ enum frame_types {
 	AUCTION_OVER
 };
 
-enum transfer_types { MONEY, FUEL};
+enum transfer_types { MONEY, FUEL };
 
 struct Frame
 {
 	int iID;
 	int frame_type;
 	ObjectState state;
-	
+
 	int iID_receiver;          // nr ID adresata wiadomoœci (pozostali uczestnicy powinni wiadomoœæ zignorowaæ)
 
 	int item_number;           // nr przedmiotu, który zosta³ wziêty lub odzyskany
@@ -138,6 +147,19 @@ float TransferSending(int ID_receiver, int transfer_type, float transfer_value)
 	return frame.transfer_value;
 }
 
+float TryBuyAuction(int auctioneer_id, float transfer_value_proposed, float fuel_amount_proposed)
+{
+	Frame frame;
+	frame.frame_type = AUCTION_BUY;
+	frame.iID_receiver = auctioneer_id;
+	frame.transfer_type = MONEY;
+	frame.transfer_value = transfer_value_proposed;
+	frame.proposed_fueld_amount = fuel_amount_proposed;
+	frame.iID = my_vehicle->iID;
+	int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+	return frame.transfer_value;
+}
+
 float AdvertiseOffer(int my_id, float transfer_value_proposed, float fueld_proposed)
 {
 	for (auto& pair : network_vehicles) {
@@ -156,14 +178,14 @@ float AdvertiseOffer(int my_id, float transfer_value_proposed, float fueld_propo
 			return frame.transfer_value;
 		}
 	}
-	SET_INFO_TEXT("Stworzono propozycje transakcji: %f", transfer_value_proposed);
+	SET_INFO_TEXT("Stworzono_propozycje_transakcji:_%f_zl_za_%f_paliwa", transfer_value_proposed, fueld_proposed);
 }
 
 //******************************************
 // Funkcja obs³ugi w¹tku odbioru komunikatów 
-DWORD WINAPI ReceiveThreadFunction(void *ptr)
+DWORD WINAPI ReceiveThreadFunction(void* ptr)
 {
-	multicast_net *pmt_net = (multicast_net*)ptr;  // wskaŸnik do obiektu klasy multicast_net
+	multicast_net* pmt_net = (multicast_net*)ptr;  // wskaŸnik do obiektu klasy multicast_net
 	int size;                                 // liczba bajtów ramki otrzymanej z sieci
 	Frame frame;
 	ObjectState state;
@@ -185,7 +207,7 @@ DWORD WINAPI ReceiveThreadFunction(void *ptr)
 
 				if ((network_vehicles.size() == 0) || (network_vehicles[frame.iID] == NULL))         // nie ma jeszcze takiego obiektu w tablicy -> trzeba go stworzyæ
 				{
-					MovableObject *ob = new MovableObject(&terrain);
+					MovableObject* ob = new MovableObject(&terrain);
 					ob->iID = frame.iID;
 					network_vehicles[frame.iID] = ob;
 					if (frame.existing_time > group_existing_time) group_existing_time = frame.existing_time;
@@ -209,7 +231,7 @@ DWORD WINAPI ReceiveThreadFunction(void *ptr)
 					terrain.DeleteObjectsFromSectors(network_vehicles[frame.iID]);
 					network_vehicles[frame.iID]->ChangeState(state);   // aktualizacja stanu obiektu obcego 	
 					terrain.InsertObjectIntoSectors(network_vehicles[frame.iID]);
-				}				
+				}
 			}
 			break;
 		}
@@ -256,7 +278,10 @@ DWORD WINAPI ReceiveThreadFunction(void *ptr)
 		{
 			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
 			{
-				SET_AUCTION_TEXT("Gracz %d proponuje transakcję: %f za %f paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
+				SET_AUCTION_TEXT("Gracz_%d_proponuje_transakcję:_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
+
+				active_auction.fuel_amount = frame.proposed_fueld_amount;
+				active_auction.money_amount = frame.transfer_value;
 
 				has_active_auction = true;
 			}
@@ -267,7 +292,7 @@ DWORD WINAPI ReceiveThreadFunction(void *ptr)
 		{
 			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
 			{
-				SET_AUCTION_TEXT("Gracz %d przyjął transakcję: %f za %f paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
+				SET_AUCTION_TEXT("Gracz_%d_przyjął_transakcję:_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
 
 				if (my_vehicle->state.money < frame.transfer_value) {
 
@@ -279,7 +304,7 @@ DWORD WINAPI ReceiveThreadFunction(void *ptr)
 			}
 			break;
 		}
-		
+
 		} // switch po typach ramek
 		// Opuszczenie ścieżki krytycznej / Release the Critical section
 		LeaveCriticalSection(&m_cs);               // wyjście ze ścieżki krytycznej
@@ -309,10 +334,10 @@ void InteractionInitialisation()
 		NULL,                        // no security attributes
 		0,                           // use default stack size
 		ReceiveThreadFunction,       // thread function
-		(void *)multi_reciv,         // argument to thread function
+		(void*)multi_reciv,         // argument to thread function
 		0,                           // use default creation flags
 		&dwThreadId);                // returns the thread identifier
-		
+
 }
 
 
@@ -401,6 +426,26 @@ void VirtualWorldCycle()
 	if (try_to_advertise_offer) {
 		AdvertiseOffer(my_vehicle->iID, my_vehicle->proposed_money_amount, my_vehicle->proposed_fuel_amount);
 		try_to_advertise_offer = false;
+	}
+
+	if (has_active_auction) {
+		SET_AUCTION_TEXT("Gracz_%d_oferuje_%f_paliwa_za_%f");
+
+
+		SET_AUX_TEXT("Twoja_oferta:_%f_za_%f.", my_vehicle->proposed_money_amount, active_auction.fuel_amount);
+	}
+
+	if (responded_to_auction) {
+		responded_to_auction = false;
+		if (try_buy_auction) {
+			TryBuyAuction(my_vehicle->iID, my_vehicle->proposed_money_amount, active_auction.fuel_amount);
+		}
+		else {
+			SET_AUCTION_TEXT("Odrzucono_ofertę_gracza_%d.", my_vehicle->iID);
+		}
+
+		try_buy_auction = false;
+		try_reject_auction = false;
 	}
 }
 
@@ -498,6 +543,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 	return (int)system_message.wParam;
 }
+
 
 // ************************************************************************
 // ****    Obs³uga klawiszy s³u¿¹cych do sterowania obiektami lub
@@ -882,6 +928,26 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			{
 				my_vehicle->proposed_money_amount = min(my_vehicle->proposed_money_amount + 10, my_vehicle->state.money);
 				SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
+				break;
+			}
+
+			case 'T':   // przybli¿enie widoku
+			{
+				try_to_advertise_offer = true;
+				break;
+			}
+
+			case 'Y':   // przybli¿enie widoku
+			{
+				try_buy_auction = true;
+				responded_to_auction = true;
+				break;
+			}
+
+			case 'U':   // przybli¿enie widoku
+			{
+				try_reject_auction = true;
+				responded_to_auction = true;
 				break;
 			}
 		}
