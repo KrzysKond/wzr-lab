@@ -442,6 +442,7 @@ void VirtualWorldCycle()
 		}
 		else {
 			SET_AUCTION_TEXT("Odrzucono_ofertę_gracza_%d.", my_vehicle->iID);
+			has_active_auction = false;
 		}
 
 		try_buy_auction = false;
@@ -939,15 +940,19 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 			case 'Y':   // przybli¿enie widoku
 			{
-				try_buy_auction = true;
-				responded_to_auction = true;
+				if (has_active_auction) {
+					try_buy_auction = true;
+					responded_to_auction = true;
+				}
 				break;
 			}
 
 			case 'U':   // przybli¿enie widoku
 			{
-				try_reject_auction = true;
-				responded_to_auction = true;
+				if (has_active_auction) {
+					try_reject_auction = true;
+					responded_to_auction = true;
+				}
 				break;
 			}
 		}
