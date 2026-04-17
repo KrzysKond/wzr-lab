@@ -56,6 +56,7 @@ extern ViewParameters par_view;
 bool mouse_control = 0;                   // sterowanie pojazdem za pomoc¹ myszki
 int cursor_x, cursor_y;                         // polo¿enie kursora myszki w chwili w³¹czenia sterowania
 bool try_to_advertise_offer = false;
+bool has_active_auction = false;
 
 template<typename... Args>
 inline int SafeSprintf(char* buffer, size_t buffer_size, const char* format, Args... args) {
@@ -74,7 +75,13 @@ inline int SafeSprintf(char* buffer, size_t buffer_size, const char* format, Arg
 extern float TransferSending(int ID_receiver, int transfer_type, float transfer_value);
 
 enum frame_types {
-	OBJECT_STATE, ITEM_TAKING, ITEM_RENEWAL, COLLISION, TRANSFER
+	OBJECT_STATE, ITEM_TAKING, ITEM_RENEWAL, COLLISION, TRANSFER,
+
+	AUCTION_START,
+	AUCTION_RESPONSE,
+	AUCTION_BUY,
+	AUCTION_BUY_CONFIRMED,
+	AUCTION_OVER
 };
 
 enum transfer_types { MONEY, FUEL};
@@ -137,7 +144,7 @@ float AdvertiseOffer(int my_id, float transfer_value_proposed, float fueld_propo
 		int ID_receiver = pair.first;
 		if (ID_receiver != my_id) {
 			Frame frame;
-			frame.frame_type = TRANSFER;
+			frame.frame_type = AUCTION_START;
 			frame.iID_receiver = ID_receiver;
 			frame.transfer_type = MONEY;
 			frame.transfer_value = transfer_value_proposed;
@@ -241,6 +248,34 @@ DWORD WINAPI ReceiveThreadFunction(void *ptr)
 					my_vehicle->state.amount_of_fuel += frame.transfer_value;
 
 				// nale¿a³oby jeszcze przelew potwierdziæ (w UDP ramki mog¹ byæ gubione!)
+			}
+			break;
+		}
+
+		case AUCTION_START:                       // frame informuj¹ca o przelewie pieniê¿nym lub przekazaniu towaru    
+		{
+			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
+			{
+				SET_AUCTION_TEXT("Gracz %d proponuje transakcję: %f za %f paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
+
+				has_active_auction = true;
+			}
+			break;
+		}
+
+		case AUCTION_BUY:                       // frame informuj¹ca o przelewie pieniê¿nym lub przekazaniu towaru    
+		{
+			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
+			{
+				SET_AUCTION_TEXT("Gracz %d przyjął transakcję: %f za %f paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
+
+				if (my_vehicle->state.money < frame.transfer_value) {
+
+				}
+
+				has_active_auction = false;
+
+				TransferSending(frame.iID, MONEY, frame.transfer_value);
 			}
 			break;
 		}
@@ -520,11 +555,11 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			{
 				if (it->second)
 				{
-					MovableObject *ob = it->second;
+					MovableObject* ob = it->second;
 					float xx, yy, zz;
 					ScreenCoordinates(&xx, &yy, &zz, ob->state.vPos);
 					yy = r.bottom - r.top - yy;
-					float odl_kw = (xx - x)*(xx - x) + (yy - y)*(yy - y);
+					float odl_kw = (xx - x) * (xx - x) + (yy - y) * (yy - y);
 					if (min_dist > odl_kw)
 					{
 						min_dist = odl_kw;
@@ -533,7 +568,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 					}
 				}
 			}
-		
+
 
 			// trzeba to przerobić na wersję sektorową, gdyż przedmiotów może być dużo!
 			// niestety nie jest to proste. 
@@ -553,7 +588,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 					placement = terrain.p[i].vPos;
 				ScreenCoordinates(&xx, &yy, &zz, placement);
 				yy = r.bottom - r.top - yy;
-				float odl_kw = (xx - x)*(xx - x) + (yy - y)*(yy - y);
+				float odl_kw = (xx - x) * (xx - x) + (yy - y) * (yy - y);
 				if (min_dist > odl_kw)
 				{
 					min_dist = odl_kw;
@@ -615,7 +650,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			float wheel_turn_angle = (float)(cursor_x - x) / 20;
 			if (wheel_turn_angle > 45) wheel_turn_angle = 45;
 			if (wheel_turn_angle < -45) wheel_turn_angle = -45;
-			my_vehicle->state.wheel_turn_angle = PI*wheel_turn_angle / 180;
+			my_vehicle->state.wheel_turn_angle = PI * wheel_turn_angle / 180;
 		}
 		break;
 	}
@@ -623,7 +658,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 	{
 		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);  // dodatni do przodu, ujemny do ty³u
 		//fprintf(f,"zDelta = %d\n",zDelta);          // zwykle +-120, jak siê bardzo szybko zakrêci to czasmi wyjdzie +-240
-		if (zDelta > 0){
+		if (zDelta > 0) {
 			if (par_view.distance > 0.5) par_view.distance /= 1.2;
 			else par_view.distance = 0;
 		}
@@ -639,225 +674,218 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 		switch (LOWORD(wParam))
 		{
-		case VK_SHIFT:
-		{
-			SHIFT_pressed = 1;
-			break;
-		}
-		case VK_CONTROL:
-		{
-			CTRL_pressed = 1;
-			break;
-		}
-		case VK_MENU:
-		{
-			ALT_pressed = 1;
-			break;
-		}
-
-		case VK_SPACE:
-		{
-			my_vehicle->breaking_degree = 1.0;       // stopieñ hamowania (reszta zale¿y od si³y docisku i wsp. tarcia)
-			break;                       // 1.0 to maksymalny stopieñ (np. zablokowanie kó³)
-		}
-		case VK_UP:
-		{
-			if (CTRL_pressed && par_view.top_view)
-				par_view.shift_to_bottom += par_view.distance / 2;       // przesunięcie widoku z kamery w górę
-			else
-				my_vehicle->F = my_vehicle->F_max;        // si³a pchaj¹ca do przodu
-			break;
-		}
-		case VK_DOWN:
-		{
-			if (CTRL_pressed && par_view.top_view)
-				par_view.shift_to_bottom -= par_view.distance / 2;       // przesunięcie widoku z kamery w dół 
-			else
-				my_vehicle->F = -my_vehicle->F_max / 2;        // sila pchajaca do tylu
-			break;
-		}
-		case VK_LEFT:
-		{
-			if (CTRL_pressed && par_view.top_view)
-				par_view.shift_to_right += par_view.distance / 2;
-			else
+			case VK_SHIFT:
 			{
-				if (my_vehicle->steer_wheel_speed < 0) {
-					my_vehicle->steer_wheel_speed = 0;
-					my_vehicle->if_keep_steer_wheel = true;
-				}
-				else {
-					if (SHIFT_pressed) my_vehicle->steer_wheel_speed = 0.5;
-					else my_vehicle->steer_wheel_speed = 0.5 / 4;
-				}
+				SHIFT_pressed = 1;
+				break;
+			}
+			case VK_CONTROL:
+			{
+				CTRL_pressed = 1;
+				break;
+			}
+			case VK_MENU:
+			{
+				ALT_pressed = 1;
+				break;
 			}
 
-			break;
-		}
-		case VK_RIGHT:
-		{
-			if (CTRL_pressed && par_view.top_view)
-				par_view.shift_to_right -= par_view.distance / 2;
-			else
+			case VK_SPACE:
 			{
-				if (my_vehicle->steer_wheel_speed > 0) {
-					my_vehicle->steer_wheel_speed = 0;
-					my_vehicle->if_keep_steer_wheel = true;
-				}
-				else {
-					if (SHIFT_pressed) my_vehicle->steer_wheel_speed = -0.5;
-					else my_vehicle->steer_wheel_speed = -0.5 / 4;
-				}
+				my_vehicle->breaking_degree = 1.0;       // stopieñ hamowania (reszta zale¿y od si³y docisku i wsp. tarcia)
+				break;                       // 1.0 to maksymalny stopieñ (np. zablokowanie kó³)
 			}
-			break;
-		}
-		case VK_HOME:
-		{
-			if (CTRL_pressed && par_view.top_view)
-				par_view.shift_to_right = par_view.shift_to_bottom = 0;
-
-			break;
-		}
-
-		case 'N':   // przybli¿enie widoku
-		
-			chosen_player = (chosen_player - 1) % (network_vehicles.size() + 1);
-			SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
-			break;
-		}
-
-		case 'M':   // przybli¿enie widoku
-		{
-			chosen_player = (chosen_player + 1) % (network_vehicles.size() + 1);
-			SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
-			break;
-		}
-
-		case 'K':   // przybli¿enie widoku
+			case VK_UP:
+			{
+				if (CTRL_pressed && par_view.top_view)
+					par_view.shift_to_bottom += par_view.distance / 2;       // przesunięcie widoku z kamery w górę
+				else
+					my_vehicle->F = my_vehicle->F_max;        // si³a pchaj¹ca do przodu
+				break;
+			}
+			case VK_DOWN:
+			{
+				if (CTRL_pressed && par_view.top_view)
+					par_view.shift_to_bottom -= par_view.distance / 2;       // przesunięcie widoku z kamery w dół 
+				else
+					my_vehicle->F = -my_vehicle->F_max / 2;        // sila pchajaca do tylu
+				break;
+			}
+			case VK_LEFT:
+			{
+				if (CTRL_pressed && par_view.top_view)
+					par_view.shift_to_right += par_view.distance / 2;
+				else
 				{
-			my_vehicle->proposed_fuel_amount = max(my_vehicle->proposed_fuel_amount - 10, 0);
-			SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
-			break;
-		}
-
-		case 'L':   // przybli¿enie widoku
-		{
-			my_vehicle->proposed_fuel_amount = min(my_vehicle->proposed_fuel_amount + 10, my_vehicle->state.amount_of_fuel);
-			SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
-			break;
-		}
-
-		case 'O':   // przybli¿enie widoku
-		{
-			my_vehicle->proposed_money_amount = max(my_vehicle->proposed_money_amount - 10, 0);
-			SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
-			break;
-		}
-
-		case 'P':   // przybli¿enie widoku
-		{
-			my_vehicle->proposed_money_amount = min(my_vehicle->proposed_money_amount + 10, my_vehicle->state.money);
-			SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
-			break;
-		}
-
-		case 'T':   // przybli¿enie widoku
-		{
-			try_to_advertise_offer = true;
-			break;
-		}
-
-		case 'W':   // przybli¿enie widoku
-		{
-			//initial_camera_position = initial_camera_position - initial_camera_direction*0.3;
-			if (par_view.distance > 0.5)par_view.distance /= 1.2;
-			else par_view.distance = 0;
-			break;
-		}
-		case 'S':   // distance widoku
-		{
-			//initial_camera_position = initial_camera_position + initial_camera_direction*0.3; 
-			if (par_view.distance > 0) par_view.distance *= 1.2;
-			else par_view.distance = 0.5;
-			break;
-		}
-		case 'Q':   // widok z góry
-		{
-			par_view.top_view = 1 - par_view.top_view;
-			if (par_view.top_view)
-				SetWindowText(main_window, "Włączono widok z góry!");
-			else
-				SetWindowText(main_window, "Wyłączono widok z góry.");
-			break;
-		}
-		case 'E':   // obrót kamery ku górze (wzglêdem lokalnej osi z)
-		{
-			par_view.cam_angle_z += PI * 5 / 180;
-			break;
-		}
-		case 'D':   // obrót kamery ku do³owi (wzglêdem lokalnej osi z)
-		{
-			par_view.cam_angle_z -= PI * 5 / 180;
-			break;
-		}
-		case 'A':   // w³¹czanie, wy³¹czanie trybu œledzenia obiektu
-		{
-			par_view.tracking = 1 - par_view.tracking;
-			break;
-		}
-		case 'Z':   // zoom - zmniejszenie k¹ta widzenia
-		{
-			par_view.zoom /= 1.1;
-			RECT rc;
-			GetClientRect(main_window, &rc);
-			WindowSizeChange(rc.right - rc.left, rc.bottom - rc.top);
-			break;
-		}
-		case 'X':   // zoom - zwiêkszenie k¹ta widzenia
-		{
-			par_view.zoom *= 1.1;
-			RECT rc;
-			GetClientRect(main_window, &rc);
-			WindowSizeChange(rc.right - rc.left, rc.bottom - rc.top);
-			break;
-		}
-
-		case 'F':  // przekazanie 10 kg paliwa pojazdom zaznaczonym
-		{
-			for (map<int, MovableObject*>::iterator it = network_vehicles.begin(); it != network_vehicles.end(); ++it)
-			{
-				if (it->second)
-				{
-					MovableObject *ob = it->second;
-					if (ob->if_selected)
-						float ilosc_p = TransferSending(ob->iID, FUEL, 10);
+					if (my_vehicle->steer_wheel_speed < 0) {
+						my_vehicle->steer_wheel_speed = 0;
+						my_vehicle->if_keep_steer_wheel = true;
+					}
+					else {
+						if (SHIFT_pressed) my_vehicle->steer_wheel_speed = 0.5;
+						else my_vehicle->steer_wheel_speed = 0.5 / 4;
+					}
 				}
+
+				break;
 			}
-			break;
-		}
-		case 'G':  // przekazanie 100 jednostek gotowki pojazdom zaznaczonym
-		{
-			for (map<int, MovableObject*>::iterator it = network_vehicles.begin(); it != network_vehicles.end(); ++it)
+			case VK_RIGHT:
 			{
-				if (it->second)
+				if (CTRL_pressed && par_view.top_view)
+					par_view.shift_to_right -= par_view.distance / 2;
+				else
 				{
-					MovableObject *ob = it->second;
-					if (ob->if_selected)
-						float ilosc_p = TransferSending(ob->iID, MONEY, 100);
+					if (my_vehicle->steer_wheel_speed > 0) {
+						my_vehicle->steer_wheel_speed = 0;
+						my_vehicle->if_keep_steer_wheel = true;
+					}
+					else {
+						if (SHIFT_pressed) my_vehicle->steer_wheel_speed = -0.5;
+						else my_vehicle->steer_wheel_speed = -0.5 / 4;
+					}
 				}
+				break;
 			}
-			break;
-		}
-		
-		case 'V':     // rozpoczęcie zaznaczania metodą lasso
-		{
-			L_pressed = true;
-			break;
-	
+			case VK_HOME:
+			{
+				if (CTRL_pressed && par_view.top_view)
+					par_view.shift_to_right = par_view.shift_to_bottom = 0;
 
-		} // switch po klawiszach
+				break;
+			}
 
-		break;
+			case 'N':   // przybli¿enie widoku
+			{
+				chosen_player = (chosen_player - 1) % (network_vehicles.size() + 1);
+				SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
+				break;
+			}
+
+			case 'M':   // przybli¿enie widoku
+			{
+				chosen_player = (chosen_player + 1) % (network_vehicles.size() + 1);
+				SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
+				break;
+			}
+
+			case 'K':   // przybli¿enie widoku
+			{
+				my_vehicle->proposed_fuel_amount = max(my_vehicle->proposed_fuel_amount - 1, 0);
+				SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
+				break;
+			}
+
+			case 'L':   // przybli¿enie widoku
+			{
+				my_vehicle->proposed_fuel_amount = min(my_vehicle->proposed_fuel_amount + 1, my_vehicle->state.amount_of_fuel);
+				SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
+				break;
+			}
+
+			case 'O':   // przybli¿enie widoku
+			{
+				my_vehicle->proposed_money_amount = max(my_vehicle->proposed_money_amount - 10, 0);
+				SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
+				break;
+			}
+
+			case 'P':   // przybli¿enie widoku
+			{
+				my_vehicle->proposed_money_amount = min(my_vehicle->proposed_money_amount + 10, my_vehicle->state.money);
+				SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
+				break;
+			}
+
+			case 'T':   // przybli¿enie widoku
+			{
+				try_to_advertise_offer = true;
+				break;
+			}
+
+			case 'W':   // przybli¿enie widoku
+			{
+				//initial_camera_position = initial_camera_position - initial_camera_direction*0.3;
+				if (par_view.distance > 0.5)par_view.distance /= 1.2;
+				else par_view.distance = 0;
+				break;
+			}
+			case 'S':   // distance widoku
+			{
+				//initial_camera_position = initial_camera_position + initial_camera_direction*0.3; 
+				if (par_view.distance > 0) par_view.distance *= 1.2;
+				else par_view.distance = 0.5;
+				break;
+			}
+			case 'Q':   // widok z góry
+			{
+				par_view.top_view = 1 - par_view.top_view;
+				if (par_view.top_view)
+					SetWindowText(main_window, "Włączono widok z góry!");
+				else
+					SetWindowText(main_window, "Wyłączono widok z góry.");
+				break;
+			}
+			case 'E':   // obrót kamery ku górze (wzglêdem lokalnej osi z)
+			{
+				par_view.cam_angle_z += PI * 5 / 180;
+				break;
+			}
+			case 'D':   // obrót kamery ku do³owi (wzglêdem lokalnej osi z)
+			{
+				par_view.cam_angle_z -= PI * 5 / 180;
+				break;
+			}
+			case 'A':   // w³¹czanie, wy³¹czanie trybu œledzenia obiektu
+			{
+				par_view.tracking = 1 - par_view.tracking;
+				break;
+			}
+			case 'Z':   // zoom - zmniejszenie k¹ta widzenia
+			{
+				par_view.zoom /= 1.1;
+				RECT rc;
+				GetClientRect(main_window, &rc);
+				WindowSizeChange(rc.right - rc.left, rc.bottom - rc.top);
+				break;
+			}
+			case 'X':   // zoom - zwiêkszenie k¹ta widzenia
+			{
+				par_view.zoom *= 1.1;
+				RECT rc;
+				GetClientRect(main_window, &rc);
+				WindowSizeChange(rc.right - rc.left, rc.bottom - rc.top);
+				break;
+			}
+
+			case 'F':  // przekazanie 10 kg paliwa pojazdom zaznaczonym
+			{
+				for (map<int, MovableObject*>::iterator it = network_vehicles.begin(); it != network_vehicles.end(); ++it)
+				{
+					if (it->second)
+					{
+						MovableObject* ob = it->second;
+						if (ob->if_selected)
+							float ilosc_p = TransferSending(ob->iID, FUEL, 10);
+					}
+				}
+				break;
+			}
+			case 'G':  // przekazanie 100 jednostek gotowki pojazdom zaznaczonym
+			{
+				for (map<int, MovableObject*>::iterator it = network_vehicles.begin(); it != network_vehicles.end(); ++it)
+				{
+					if (it->second)
+					{
+						MovableObject* ob = it->second;
+						if (ob->if_selected)
+							float ilosc_p = TransferSending(ob->iID, MONEY, 100);
+					}
+				}
+				break;
+			}
+
+			break;
+			}
 	}
 
 	case WM_KEYUP:
@@ -879,9 +907,6 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			ALT_pressed = 0;
 			break;
 		}
-		case 'L':     // zakonczenie zaznaczania metodą lasso
-			L_pressed = false;
-			break;
 		case VK_SPACE:
 		{
 			my_vehicle->breaking_degree = 0.0;
@@ -912,10 +937,6 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			my_vehicle->if_keep_steer_wheel = false;
 			break;
 		}
-
-		}
-
-		break;
 	}
 
 	} // switch po komunikatach
