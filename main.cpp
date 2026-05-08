@@ -29,6 +29,11 @@ struct Auction {
 	float money_amount = 0;
 	int player_whos_buying = -1;
 	int player_whos_selling = -1;
+
+	long start_time = 0;
+	long end_time = 1;
+	constexpr static long INITIAL_AUCTION_TIMEOUT = 1000000000;
+	constexpr static long AUCTION_NEW_OFFER_TIME_RENEWAL = 50000000;
 };
 Auction active_auction{};
 

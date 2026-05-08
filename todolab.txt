@@ -1,0 +1,19 @@
+negocjacje: mogly sie toczyc dowolnie dlugo
+czasami nie jest to pozadany efekt
+
+mechanizm licytacji: pozwala na szybkie zakoñczenie uzgadniania
+	roznica jest taka ¿e wa¿ny jest czas
+	czas jest ograniczony 
+		(mo¿e byæ wyznaczony konkretny czas ca³ej licytacji i koñczy siê tak ¿e ten co zlozyl najlepsza oferte wygrywa)
+		(mo¿e byæ trak ¿ê ofety przed³u¿aj¹ czas i jak ktoœ nie z³o¿y lepszej oferty to nie przed³u¿y)
+	w oknie informacja ile czasu do konca i informacja o najlepszej ofercie
+	oferty powinny byæ coraz lepsze dla tego co rozpocz¹³ proces (ten co sprzedaje)
+	jeœli oferta jest gorsza to jest ignorowana
+
+	ze by rozpocz¹æ licytacje wysy³¹my informacjê do wszystkich
+	pierwszym krokiem jest wys³anie zaproszenia do wziêcia udzia³u w licytacji z informacj¹ o tym kto wysy³a zaproszenie
+	oferta powinna byæ atrakcyjna (jak ktoœ chce kupiæ paliwo to mo¿e wys³¹æ ofertê z bardzo zawy¿on¹ cen¹) 
+	jak pojawi¹ siê chêtni a powinni za tak¹ cenê mog¹ licytowaæ i zak³adamy ¿e cena bêdzie spada³a
+	np. inicjalizacja - paliwo za 100
+	1. sprzedam paliwo za 90 2. sprzedam za 80 itd
+
