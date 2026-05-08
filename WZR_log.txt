@@ -381,449 +381,449 @@ Odczyt danych o terrainie z pliku teren2.map
     mapa w=16, k=-7, l.oczek = 8
 Znaleziono w pliku teren2.map przedmioty w liczbie 224
   przedm.0, type = 1, value = 10.000000
-wstawiam przedmiot 42909744: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
+wstawiam przedmiot 43769912: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
   przedm.1, type = 1, value = 10.000000
-wstawiam przedmiot 42909840: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
+wstawiam przedmiot 43770008: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
   przedm.2, type = 1, value = 10.000000
-wstawiam przedmiot 42909936: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
+wstawiam przedmiot 43770104: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
   przedm.3, type = 1, value = 10.000000
-wstawiam przedmiot 42910032: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
+wstawiam przedmiot 43770200: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
   przedm.4, type = 1, value = 10.000000
-wstawiam przedmiot 42910128: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
+wstawiam przedmiot 43770296: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
   przedm.5, type = 1, value = 10.000000
-wstawiam przedmiot 42910224: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43770392: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.6, type = 1, value = 10.000000
-wstawiam przedmiot 42910320: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43770488: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.7, type = 1, value = 10.000000
-wstawiam przedmiot 42910416: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43770584: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.8, type = 1, value = 10.000000
-wstawiam przedmiot 42910512: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43770680: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.9, type = 1, value = 10.000000
-wstawiam przedmiot 42910608: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43770776: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.10, type = 1, value = 10.000000
-wstawiam przedmiot 42910704: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43770872: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.11, type = 1, value = 10.000000
-wstawiam przedmiot 42910800: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43770968: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.12, type = 1, value = 10.000000
-wstawiam przedmiot 42910896: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43771064: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.13, type = 1, value = 10.000000
-wstawiam przedmiot 42910992: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
+wstawiam przedmiot 43771160: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
   przedm.14, type = 1, value = 10.000000
-wstawiam przedmiot 42911088: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 18, k = -2
+wstawiam przedmiot 43771256: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 18, k = -2
   przedm.15, type = 1, value = 10.000000
-wstawiam przedmiot 42911184: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
+wstawiam przedmiot 43771352: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
   przedm.16, type = 1, value = 10.000000
-wstawiam przedmiot 42911280: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
+wstawiam przedmiot 43771448: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
   przedm.17, type = 1, value = 10.000000
-wstawiam przedmiot 42911376: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
+wstawiam przedmiot 43771544: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
   przedm.18, type = 1, value = 10.000000
-wstawiam przedmiot 42911472: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
+wstawiam przedmiot 43771640: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
   przedm.19, type = 1, value = 10.000000
-wstawiam przedmiot 42911568: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 21, k = -4
+wstawiam przedmiot 43771736: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 21, k = -4
   przedm.20, type = 1, value = 10.000000
-wstawiam przedmiot 42911664: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -5
+wstawiam przedmiot 43771832: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -5
   przedm.21, type = 1, value = 10.000000
-wstawiam przedmiot 42911760: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -4
+wstawiam przedmiot 43771928: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -4
   przedm.22, type = 1, value = 10.000000
-wstawiam przedmiot 42911856: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -4
+wstawiam przedmiot 43772024: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -4
   przedm.23, type = 1, value = 10.000000
-wstawiam przedmiot 42911952: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -4
+wstawiam przedmiot 43772120: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -4
   przedm.24, type = 1, value = 10.000000
-wstawiam przedmiot 42912048: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
+wstawiam przedmiot 43772216: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
   przedm.25, type = 1, value = 10.000000
-wstawiam przedmiot 42912144: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
+wstawiam przedmiot 43772312: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
   przedm.26, type = 1, value = 10.000000
-wstawiam przedmiot 42912240: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
+wstawiam przedmiot 43772408: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
   przedm.27, type = 1, value = 10.000000
-wstawiam przedmiot 42912336: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
+wstawiam przedmiot 43772504: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
   przedm.28, type = 1, value = 10.000000
-wstawiam przedmiot 42912432: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
+wstawiam przedmiot 43772600: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
   przedm.29, type = 1, value = 10.000000
-wstawiam przedmiot 42912528: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43772696: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.30, type = 1, value = 10.000000
-wstawiam przedmiot 42912624: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
+wstawiam przedmiot 43772792: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
   przedm.31, type = 1, value = 10.000000
-wstawiam przedmiot 42912720: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
+wstawiam przedmiot 43772888: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
   przedm.32, type = 1, value = 10.000000
-wstawiam przedmiot 42912816: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
+wstawiam przedmiot 43772984: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -3
   przedm.33, type = 1, value = 10.000000
-wstawiam przedmiot 42912912: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
+wstawiam przedmiot 43773080: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
   przedm.34, type = 1, value = 10.000000
-wstawiam przedmiot 42913008: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
+wstawiam przedmiot 43773176: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 20, k = -2
   przedm.35, type = 1, value = 10.000000
-wstawiam przedmiot 42913104: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
+wstawiam przedmiot 43773272: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -2
   przedm.36, type = 1, value = 10.000000
-wstawiam przedmiot 42913200: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
+wstawiam przedmiot 43773368: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 19, k = -3
   przedm.37, type = 1, value = 10.000000
-wstawiam przedmiot 42913296: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43773464: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.38, type = 1, value = 10.000000
-wstawiam przedmiot 42913392: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43773560: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.39, type = 2, value = 22.830770
-wstawiam przedmiot 42913488: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -1, k = 1
+wstawiam przedmiot 43773656: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -1, k = 1
   przedm.40, type = 1, value = 10.000000
-wstawiam przedmiot 42913584: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43773752: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.41, type = 1, value = 10.000000
-wstawiam przedmiot 42913680: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43773848: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.42, type = 1, value = 10.000000
-wstawiam przedmiot 42913776: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43773944: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.43, type = 1, value = 10.000000
-wstawiam przedmiot 42913872: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43774040: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.44, type = 1, value = 10.000000
-wstawiam przedmiot 42913968: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43774136: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.45, type = 1, value = 10.000000
-wstawiam przedmiot 42914064: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43774232: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.46, type = 1, value = 10.000000
-wstawiam przedmiot 42914160: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43774328: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.47, type = 1, value = 10.000000
-wstawiam przedmiot 42914256: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43774424: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.48, type = 1, value = 10.000000
-wstawiam przedmiot 42914352: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43774520: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.49, type = 1, value = 10.000000
-wstawiam przedmiot 42914448: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43774616: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.50, type = 1, value = 10.000000
-wstawiam przedmiot 42914544: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43774712: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.51, type = 1, value = 10.000000
-wstawiam przedmiot 42914640: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
+wstawiam przedmiot 43774808: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 1
   przedm.52, type = 1, value = 10.000000
-wstawiam przedmiot 42914736: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43774904: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.53, type = 1, value = 10.000000
-wstawiam przedmiot 42914832: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775000: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.54, type = 1, value = 10.000000
-wstawiam przedmiot 42914928: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775096: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.55, type = 1, value = 10.000000
-wstawiam przedmiot 42915024: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775192: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.56, type = 1, value = 10.000000
-wstawiam przedmiot 42915120: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775288: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.57, type = 1, value = 10.000000
-wstawiam przedmiot 42915216: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775384: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.58, type = 1, value = 10.000000
-wstawiam przedmiot 42915312: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775480: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.59, type = 1, value = 10.000000
-wstawiam przedmiot 42915408: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775576: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.60, type = 1, value = 10.000000
-wstawiam przedmiot 42915504: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775672: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.61, type = 1, value = 10.000000
-wstawiam przedmiot 42915600: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775768: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.62, type = 1, value = 10.000000
-wstawiam przedmiot 42915696: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775864: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.63, type = 1, value = 10.000000
-wstawiam przedmiot 42915792: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43775960: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.64, type = 1, value = 10.000000
-wstawiam przedmiot 42915888: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43776056: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.65, type = 1, value = 10.000000
-wstawiam przedmiot 42915984: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43776152: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.66, type = 1, value = 10.000000
-wstawiam przedmiot 42916080: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43776248: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.67, type = 1, value = 10.000000
-wstawiam przedmiot 42916176: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43776344: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.68, type = 1, value = 10.000000
-wstawiam przedmiot 42916272: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43776440: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.69, type = 1, value = 10.000000
-wstawiam przedmiot 42916368: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43776536: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.70, type = 1, value = 10.000000
-wstawiam przedmiot 42916464: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43776632: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.71, type = 1, value = 10.000000
-wstawiam przedmiot 42916560: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43776728: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.72, type = 1, value = 10.000000
-wstawiam przedmiot 42916656: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43776824: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.73, type = 1, value = 10.000000
-wstawiam przedmiot 42916752: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43776920: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.74, type = 1, value = 10.000000
-wstawiam przedmiot 42916848: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43777016: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.75, type = 1, value = 10.000000
-wstawiam przedmiot 42916944: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43777112: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.76, type = 1, value = 10.000000
-wstawiam przedmiot 42917040: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43777208: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.77, type = 1, value = 10.000000
-wstawiam przedmiot 42917136: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
+wstawiam przedmiot 43777304: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = -1, k = 1
   przedm.78, type = 2, value = 20.000000
-wstawiam przedmiot 42917232: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43777400: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.79, type = 2, value = 20.000000
-wstawiam przedmiot 42917328: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43777496: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.80, type = 2, value = 20.000000
-wstawiam przedmiot 42917424: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43777592: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.81, type = 2, value = 20.000000
-wstawiam przedmiot 42917520: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43777688: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.82, type = 2, value = 20.000000
-wstawiam przedmiot 42917616: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43777784: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.83, type = 2, value = 20.000000
-wstawiam przedmiot 42917712: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43777880: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.84, type = 2, value = 20.000000
-wstawiam przedmiot 42917808: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43777976: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.85, type = 2, value = 20.000000
-wstawiam przedmiot 42917904: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43778072: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.86, type = 2, value = 20.000000
-wstawiam przedmiot 42918000: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43778168: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.87, type = 2, value = 20.000000
-wstawiam przedmiot 42918096: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43778264: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.88, type = 2, value = 20.000000
-wstawiam przedmiot 42918192: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43778360: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.89, type = 2, value = 20.000000
-wstawiam przedmiot 42918288: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43778456: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.90, type = 2, value = 20.000000
-wstawiam przedmiot 42918384: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
+wstawiam przedmiot 43778552: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 1
   przedm.91, type = 2, value = 20.000000
-wstawiam przedmiot 42918480: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43778648: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.92, type = 2, value = 20.000000
-wstawiam przedmiot 42918576: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43778744: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.93, type = 2, value = 20.000000
-wstawiam przedmiot 42918672: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43778840: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.94, type = 2, value = 20.000000
-wstawiam przedmiot 42918768: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43778936: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.95, type = 2, value = 20.000000
-wstawiam przedmiot 42918864: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779032: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.96, type = 2, value = 20.000000
-wstawiam przedmiot 42918960: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779128: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.97, type = 2, value = 20.000000
-wstawiam przedmiot 42919056: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779224: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.98, type = 2, value = 20.000000
-wstawiam przedmiot 42919152: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779320: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.99, type = 2, value = 20.000000
-wstawiam przedmiot 42919248: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779416: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.100, type = 2, value = 20.000000
-wstawiam przedmiot 42919344: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779512: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.101, type = 2, value = 20.000000
-wstawiam przedmiot 42919440: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779608: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.102, type = 2, value = 20.000000
-wstawiam przedmiot 42919536: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779704: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.103, type = 2, value = 20.000000
-wstawiam przedmiot 42919632: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779800: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.104, type = 2, value = 20.000000
-wstawiam przedmiot 42919728: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779896: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.105, type = 2, value = 20.000000
-wstawiam przedmiot 42919824: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43779992: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.106, type = 2, value = 20.000000
-wstawiam przedmiot 42919920: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780088: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.107, type = 2, value = 20.000000
-wstawiam przedmiot 42920016: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780184: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.108, type = 2, value = 20.000000
-wstawiam przedmiot 42920112: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780280: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.109, type = 2, value = 20.000000
-wstawiam przedmiot 42920208: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780376: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.110, type = 2, value = 20.000000
-wstawiam przedmiot 42920304: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780472: drzewo o wartosci 20.000000 i srednicy 2.000000 w sektor w = 0, k = 0
   przedm.111, type = 1, value = 10.000000
-wstawiam przedmiot 42920400: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
+wstawiam przedmiot 43780568: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 0, k = 0
   przedm.112, type = 0, value = 100.000000
-wstawiam przedmiot 42920496: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780664: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.113, type = 0, value = 100.000000
-wstawiam przedmiot 42920592: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780760: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.114, type = 0, value = 100.000000
-wstawiam przedmiot 42920688: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780856: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.115, type = 0, value = 100.000000
-wstawiam przedmiot 42920784: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43780952: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.116, type = 0, value = 100.000000
-wstawiam przedmiot 42920880: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781048: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.117, type = 0, value = 100.000000
-wstawiam przedmiot 42920976: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781144: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.118, type = 0, value = 100.000000
-wstawiam przedmiot 42921072: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = -1, k = 0
+wstawiam przedmiot 43781240: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = -1, k = 0
   przedm.119, type = 0, value = 100.000000
-wstawiam przedmiot 42921168: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781336: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.120, type = 0, value = 100.000000
-wstawiam przedmiot 42921264: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781432: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.121, type = 0, value = 100.000000
-wstawiam przedmiot 42921360: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781528: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.122, type = 0, value = 100.000000
-wstawiam przedmiot 42921456: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781624: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.123, type = 0, value = 100.000000
-wstawiam przedmiot 42921552: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781720: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.124, type = 0, value = 100.000000
-wstawiam przedmiot 42921648: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781816: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.125, type = 0, value = 100.000000
-wstawiam przedmiot 42921744: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43781912: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.126, type = 0, value = 100.000000
-wstawiam przedmiot 42921840: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43782008: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.127, type = 0, value = 100.000000
-wstawiam przedmiot 42921936: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43782104: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.128, type = 0, value = 100.000000
-wstawiam przedmiot 42922032: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43782200: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.129, type = 0, value = 100.000000
-wstawiam przedmiot 42922128: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43782296: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.130, type = 0, value = 100.000000
-wstawiam przedmiot 42922224: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43782392: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.131, type = 0, value = 100.000000
-wstawiam przedmiot 42922320: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
+wstawiam przedmiot 43782488: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 0, k = 0
   przedm.132, type = 0, value = 100.000000
-wstawiam przedmiot 42922416: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43782584: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.133, type = 0, value = 100.000000
-wstawiam przedmiot 42922512: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43782680: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.134, type = 0, value = 100.000000
-wstawiam przedmiot 42922608: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43782776: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.135, type = 0, value = 100.000000
-wstawiam przedmiot 42922704: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43782872: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.136, type = 0, value = 100.000000
-wstawiam przedmiot 42922800: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43782968: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.137, type = 0, value = 100.000000
-wstawiam przedmiot 42922896: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783064: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.138, type = 0, value = 100.000000
-wstawiam przedmiot 42922992: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783160: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.139, type = 0, value = 100.000000
-wstawiam przedmiot 42923088: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783256: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.140, type = 0, value = 100.000000
-wstawiam przedmiot 42923184: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783352: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.141, type = 0, value = 100.000000
-wstawiam przedmiot 42923280: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783448: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.142, type = 0, value = 100.000000
-wstawiam przedmiot 42923376: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783544: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.143, type = 0, value = 100.000000
-wstawiam przedmiot 42923472: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783640: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.144, type = 0, value = 100.000000
-wstawiam przedmiot 42923568: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783736: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.145, type = 0, value = 100.000000
-wstawiam przedmiot 42923664: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783832: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.146, type = 0, value = 100.000000
-wstawiam przedmiot 42923760: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43783928: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.147, type = 0, value = 100.000000
-wstawiam przedmiot 42923856: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43784024: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.148, type = 0, value = 100.000000
-wstawiam przedmiot 42923952: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43784120: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.149, type = 0, value = 100.000000
-wstawiam przedmiot 42924048: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43784216: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.150, type = 0, value = 100.000000
-wstawiam przedmiot 42924144: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43784312: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.151, type = 0, value = 100.000000
-wstawiam przedmiot 42924240: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43784408: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 1, k = -1
   przedm.152, type = 4, value = 0.000000
-wstawiam przedmiot 42924336: krawedz o wartosci 0.000000 i srednicy 0.000000 w sektor w = 1, k = -1
+wstawiam przedmiot 43784504: krawedz o wartosci 0.000000 i srednicy 0.000000 w sektor w = 1, k = -1
   przedm.153, type = 1, value = 10.000000
-wstawiam przedmiot 42924432: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
+wstawiam przedmiot 43784600: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
   przedm.154, type = 1, value = 10.000000
-wstawiam przedmiot 42924528: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
+wstawiam przedmiot 43784696: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
   przedm.155, type = 1, value = 10.000000
-wstawiam przedmiot 42924624: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
+wstawiam przedmiot 43784792: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
   przedm.156, type = 1, value = 10.000000
-wstawiam przedmiot 42924720: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
+wstawiam przedmiot 43784888: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
   przedm.157, type = 1, value = 10.000000
-wstawiam przedmiot 42924816: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
+wstawiam przedmiot 43784984: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
   przedm.158, type = 1, value = 10.000000
-wstawiam przedmiot 42924912: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
+wstawiam przedmiot 43785080: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
   przedm.159, type = 1, value = 10.000000
-wstawiam przedmiot 42925008: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
+wstawiam przedmiot 43785176: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
   przedm.160, type = 1, value = 10.000000
-wstawiam przedmiot 42925104: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
+wstawiam przedmiot 43785272: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 1, k = -1
   przedm.161, type = 1, value = 10.000000
-wstawiam przedmiot 42925200: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43785368: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.162, type = 1, value = 10.000000
-wstawiam przedmiot 42925296: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43785464: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.163, type = 1, value = 10.000000
-wstawiam przedmiot 42925392: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43785560: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.164, type = 1, value = 10.000000
-wstawiam przedmiot 42925488: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43785656: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.165, type = 1, value = 10.000000
-wstawiam przedmiot 42925584: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43785752: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.166, type = 1, value = 10.000000
-wstawiam przedmiot 42925680: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43785848: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.167, type = 1, value = 10.000000
-wstawiam przedmiot 42925776: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43785944: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.168, type = 1, value = 10.000000
-wstawiam przedmiot 42925872: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43786040: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.169, type = 1, value = 10.000000
-wstawiam przedmiot 42925968: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43786136: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.170, type = 1, value = 10.000000
-wstawiam przedmiot 42926064: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43786232: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.171, type = 1, value = 10.000000
-wstawiam przedmiot 42926160: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
+wstawiam przedmiot 43786328: beczka o wartosci 10.000000 i srednicy 0.525306 w sektor w = 2, k = -4
   przedm.172, type = 0, value = 100.000000
-wstawiam przedmiot 42926256: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43786424: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.173, type = 0, value = 100.000000
-wstawiam przedmiot 42926352: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43786520: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.174, type = 0, value = 100.000000
-wstawiam przedmiot 42926448: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43786616: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.175, type = 0, value = 100.000000
-wstawiam przedmiot 42926544: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43786712: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.176, type = 0, value = 100.000000
-wstawiam przedmiot 42926640: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43786808: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.177, type = 0, value = 100.000000
-wstawiam przedmiot 42926736: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43786904: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.178, type = 0, value = 100.000000
-wstawiam przedmiot 42926832: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43787000: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.179, type = 0, value = 100.000000
-wstawiam przedmiot 42926928: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43787096: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.180, type = 0, value = 100.000000
-wstawiam przedmiot 42927024: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43787192: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.181, type = 0, value = 100.000000
-wstawiam przedmiot 42927120: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43787288: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.182, type = 0, value = 100.000000
-wstawiam przedmiot 42927216: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
+wstawiam przedmiot 43787384: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 4, k = -6
   przedm.183, type = 0, value = 100.000000
-wstawiam przedmiot 42927312: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
+wstawiam przedmiot 43787480: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
   przedm.184, type = 0, value = 100.000000
-wstawiam przedmiot 42927408: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
+wstawiam przedmiot 43787576: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
   przedm.185, type = 0, value = 100.000000
-wstawiam przedmiot 42927504: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
+wstawiam przedmiot 43787672: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
   przedm.186, type = 0, value = 100.000000
-wstawiam przedmiot 42927600: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
+wstawiam przedmiot 43787768: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
   przedm.187, type = 0, value = 100.000000
-wstawiam przedmiot 42927696: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
+wstawiam przedmiot 43787864: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
   przedm.188, type = 0, value = 100.000000
-wstawiam przedmiot 42927792: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
+wstawiam przedmiot 43787960: moneta o wartosci 100.000000 i srednicy 1.000000 w sektor w = 5, k = -6
   przedm.189, type = 2, value = 27.625233
-wstawiam przedmiot 42927888: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43788056: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.190, type = 1, value = 2560.000000
-wstawiam przedmiot 42927984: beczka o wartosci 2560.000000 i srednicy 4.827341 w sektor w = 2, k = -3
+wstawiam przedmiot 43788152: beczka o wartosci 2560.000000 i srednicy 4.827341 w sektor w = 2, k = -3
   przedm.191, type = 2, value = 33.426533
-wstawiam przedmiot 42928080: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 6, k = -9
+wstawiam przedmiot 43788248: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 6, k = -9
   przedm.192, type = 2, value = 33.426533
-wstawiam przedmiot 42928176: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
+wstawiam przedmiot 43788344: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
   przedm.193, type = 2, value = 33.426533
-wstawiam przedmiot 42928272: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
+wstawiam przedmiot 43788440: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
   przedm.194, type = 2, value = 33.426533
-wstawiam przedmiot 42928368: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
+wstawiam przedmiot 43788536: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
   przedm.195, type = 2, value = 33.426533
-wstawiam przedmiot 42928464: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
+wstawiam przedmiot 43788632: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
   przedm.196, type = 2, value = 33.426533
-wstawiam przedmiot 42928560: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
+wstawiam przedmiot 43788728: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
   przedm.197, type = 2, value = 33.426533
-wstawiam przedmiot 42928656: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
+wstawiam przedmiot 43788824: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
   przedm.198, type = 2, value = 33.426533
-wstawiam przedmiot 42928752: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
+wstawiam przedmiot 43788920: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
   przedm.199, type = 2, value = 33.426533
-wstawiam przedmiot 42928848: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
+wstawiam przedmiot 43789016: drzewo o wartosci 33.426533 i srednicy 1.485663 w sektor w = 4, k = -6
   przedm.200, type = 2, value = 27.625233
-wstawiam przedmiot 42928944: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43789112: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.201, type = 2, value = 27.625233
-wstawiam przedmiot 42929040: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43789208: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.202, type = 2, value = 27.625233
-wstawiam przedmiot 42929136: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43789304: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.203, type = 2, value = 27.625233
-wstawiam przedmiot 42929232: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43789400: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.204, type = 2, value = 27.625233
-wstawiam przedmiot 42929328: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43789496: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.205, type = 2, value = 27.625233
-wstawiam przedmiot 42929424: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43789592: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.206, type = 2, value = 27.625233
-wstawiam przedmiot 42929520: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -5
+wstawiam przedmiot 43789688: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -5
   przedm.207, type = 2, value = 27.625233
-wstawiam przedmiot 42929616: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -5
+wstawiam przedmiot 43789784: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -5
   przedm.208, type = 2, value = 27.625233
-wstawiam przedmiot 42929712: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43789880: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.209, type = 2, value = 27.625233
-wstawiam przedmiot 42929808: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43789976: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.210, type = 2, value = 27.625233
-wstawiam przedmiot 42929904: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43790072: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.211, type = 2, value = 27.625233
-wstawiam przedmiot 42930000: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
+wstawiam przedmiot 43790168: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 4, k = -6
   przedm.212, type = 2, value = 27.625233
-wstawiam przedmiot 42930096: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 5, k = -6
+wstawiam przedmiot 43790264: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 5, k = -6
   przedm.213, type = 2, value = 27.625233
-wstawiam przedmiot 42930192: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 5, k = -6
+wstawiam przedmiot 43790360: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = 5, k = -6
   przedm.214, type = 2, value = 27.625233
-wstawiam przedmiot 42930288: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = -2, k = 0
+wstawiam przedmiot 43790456: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = -2, k = 0
   przedm.215, type = 2, value = 27.625233
-wstawiam przedmiot 42930384: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = -2, k = 0
+wstawiam przedmiot 43790552: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = -2, k = 0
   przedm.216, type = 2, value = 27.625233
-wstawiam przedmiot 42930480: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = -2, k = 0
+wstawiam przedmiot 43790648: drzewo o wartosci 27.625233 i srednicy 1.340631 w sektor w = -2, k = 0
   przedm.217, type = 2, value = 22.830770
-wstawiam przedmiot 42930576: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -1, k = 1
+wstawiam przedmiot 43790744: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -1, k = 1
   przedm.218, type = 2, value = 22.830770
-wstawiam przedmiot 42930672: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -2, k = 0
+wstawiam przedmiot 43790840: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -2, k = 0
   przedm.219, type = 2, value = 22.830770
-wstawiam przedmiot 42930768: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -2, k = 0
+wstawiam przedmiot 43790936: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -2, k = 0
   przedm.220, type = 2, value = 22.830770
-wstawiam przedmiot 42930864: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -2, k = 0
+wstawiam przedmiot 43791032: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = -2, k = 0
   przedm.221, type = 2, value = 22.830770
-wstawiam przedmiot 42930960: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = 0, k = 0
+wstawiam przedmiot 43791128: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = 0, k = 0
   przedm.222, type = 2, value = 22.830770
-wstawiam przedmiot 42931056: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = 0, k = 0
+wstawiam przedmiot 43791224: drzewo o wartosci 22.830770 i srednicy 1.220769 w sektor w = 0, k = 0
   przedm.223, type = 2, value = 22.830770
