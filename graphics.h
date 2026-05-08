@@ -35,6 +35,8 @@ struct ViewParameters
 
 	char info_text[512], aux_text[512];
 
+	char time_text[512];
+
 	char team_text[512];
 };
 

@@ -32,6 +32,7 @@ struct Auction {
 
 	long start_time = 0;
 	long end_time = 1;
+	long remaining_time = 0;
 	constexpr static long INITIAL_AUCTION_TIMEOUT = 1000000000;
 	constexpr static long AUCTION_NEW_OFFER_TIME_RENEWAL = 50000000;
 };
@@ -89,6 +90,7 @@ inline int SafeSprintf(char* buffer, size_t buffer_size, const char* format, Arg
 #define SET_AUCTION_TEXT(fmt, ...) SafeSprintf(par_view.auction_text, 512, fmt, __VA_ARGS__)
 #define SET_INFO_TEXT(fmt, ...) SafeSprintf(par_view.info_text, 512, fmt, __VA_ARGS__)
 #define SET_AUX_TEXT(fmt, ...) SafeSprintf(par_view.aux_text, 512, fmt, __VA_ARGS__)
+#define SET_TIMER_TEXT(fmt, ...) SafeSprintf(par_view.time_text, 512, fmt, __VA_ARGS__)
 
 extern float TransferSending(int ID_receiver, int transfer_type, float transfer_value);
 
@@ -99,7 +101,9 @@ enum frame_types {
 	AUCTION_RESPONSE,
 	AUCTION_BUY,
 	AUCTION_BUY_CONFIRMED,
-	AUCTION_OVER
+	AUCTION_OVER,
+
+	AUCTION_UPDATE,
 };
 
 enum transfer_types { MONEY, FUEL };
@@ -122,6 +126,8 @@ struct Frame
 	int team_number;
 
 	long existing_time;        // czas jaki uplyn¹³ od uruchomienia programu
+
+	long remaining_auction_time = 0;
 };
 
 // Funkcja wysylajaca ramke z przekazem, zwraca zrealizowan¹ wartoœæ przekazu
@@ -179,6 +185,26 @@ float AcceptOfferAndGiveFuel(int auctioneer_id, float fuel_amount_proposed)
 	return frame.transfer_value;
 }
 
+float SendAuctionUpdateToAll(int auction_owner_id)
+{
+	for (auto& pair : network_vehicles) {
+		int ID_receiver = pair.first;
+		if (ID_receiver != auction_owner_id) {
+			Frame frame;
+			frame.frame_type = AUCTION_UPDATE;
+			frame.iID_receiver = ID_receiver;
+			frame.transfer_value = active_auction.money_amount;
+			frame.proposed_fueld_amount = active_auction.fuel_amount;
+			frame.iID = auction_owner_id;
+
+			int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
+		}
+	}
+
+	return 0.f;
+}
+
 float TryBuyAuction(int auctioneer_id, float transfer_value_proposed, float fuel_amount_proposed)
 {
 	Frame frame;
@@ -190,6 +216,8 @@ float TryBuyAuction(int auctioneer_id, float transfer_value_proposed, float fuel
 	frame.iID = my_vehicle->iID;
 
 	SET_AUCTION_TEXT("Wyslano_Graczowi_%d_oferte_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
+
+
 
 	int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
 	return frame.transfer_value;
@@ -207,6 +235,11 @@ float AdvertiseOffer(int my_id, float transfer_value_proposed, float fueld_propo
 			frame.transfer_value = transfer_value_proposed;
 			frame.proposed_fueld_amount = fueld_proposed;
 			frame.iID = my_vehicle->iID;
+
+			frame.remaining_auction_time = Auction::INITIAL_AUCTION_TIMEOUT;
+			active_auction.start_time = clock();
+			active_auction.end_time = clock() + Auction::INITIAL_AUCTION_TIMEOUT;
+			active_auction.remaining_time = Auction::INITIAL_AUCTION_TIMEOUT;
 
 			active_auction.fuel_amount = frame.proposed_fueld_amount;
 			active_auction.money_amount = frame.transfer_value;
@@ -314,12 +347,24 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 			break;
 		}
 
+		case AUCTION_UPDATE:
+		{
+			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
+			{
+				active_auction.remaining_time = frame.remaining_auction_time;
+				active_auction.money_amount = frame.transfer_value;
+				active_auction.player_whos_selling = frame.iID;
+				active_auction.player_whos_buying = -1;
+			}
+		}
+
 		case AUCTION_START:                       // frame informuj¹ca o przelewie pieniê¿nym lub przekazaniu towaru    
 		{
 			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
 			{
 				SET_AUCTION_TEXT("Gracz_%d_proponuje_transakcję:_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
 
+				active_auction.remaining_time = frame.remaining_auction_time;
 				active_auction.fuel_amount = frame.proposed_fueld_amount;
 				active_auction.money_amount = frame.transfer_value;
 				active_auction.player_whos_selling = frame.iID;
@@ -336,12 +381,21 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 			{
 				SET_AUCTION_TEXT("Otrzymano_od_gracza_%d_oferte_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
 
-				has_an_auction_to_confirm = true;
-				active_auction.fuel_amount = frame.proposed_fueld_amount;
-				active_auction.money_amount = frame.transfer_value;
-				active_auction.player_whos_buying = frame.iID;
-				active_auction.player_whos_selling = my_vehicle->iID;
-				has_active_auction = true;
+				if (active_auction.money_amount < frame.transfer_value) {
+					// send AUCTION_UPDATE
+					active_auction.remaining_time += Auction::AUCTION_NEW_OFFER_TIME_RENEWAL;
+					active_auction.end_time += Auction::AUCTION_NEW_OFFER_TIME_RENEWAL;
+
+
+					has_an_auction_to_confirm = true;
+					active_auction.fuel_amount = frame.proposed_fueld_amount;
+					active_auction.money_amount = frame.transfer_value;
+					active_auction.player_whos_buying = frame.iID;
+					active_auction.player_whos_selling = my_vehicle->iID;
+					has_active_auction = true;
+
+					SendAuctionUpdateToAll(frame.iID);
+				}
 			}
 			break;
 		}
@@ -476,6 +530,8 @@ void VirtualWorldCycle()
 		my_vehicle->number_of_renewed_item = -1;
 	}
 
+	//if (active_auction)
+	SET_TIMER_TEXT("Licytacja:_czas_pozostal:_%ll_", active_auction.remaining_time);
 
 	if (try_to_advertise_offer) {
 		AdvertiseOffer(my_vehicle->iID, my_vehicle->proposed_money_amount, my_vehicle->proposed_fuel_amount);

@@ -158,6 +158,9 @@ void DrawScene()
 	glRasterPos2f(15.0, -11.0);
 	glPrint("%s", par_view.aux_text);
 
+	glRasterPos2f(2.0, -15.0);
+	glPrint("%s", par_view.time_text);
+
 	glRasterPos2f(15.0, -5.0);
 	glPrint("%s", par_view.team_text);
 	glLoadIdentity();
