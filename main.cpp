@@ -33,8 +33,8 @@ struct Auction {
 	long start_time = 0;
 	long end_time = 1;
 	long remaining_time = 0;
-	constexpr static long INITIAL_AUCTION_TIMEOUT = 1000000000;
-	constexpr static long AUCTION_NEW_OFFER_TIME_RENEWAL = 50000000;
+	constexpr static long INITIAL_AUCTION_TIMEOUT = 10000;
+	constexpr static long AUCTION_NEW_OFFER_TIME_RENEWAL = 500;
 };
 Auction active_auction{};
 
@@ -185,8 +185,15 @@ float AcceptOfferAndGiveFuel(int auctioneer_id, float fuel_amount_proposed)
 	return frame.transfer_value;
 }
 
-float SendAuctionUpdateToAll(int auction_owner_id)
+float SendAuctionUpdateToAll(int auction_owner_id, long time_remaining = 0)
 {
+	if (time_remaining != 0) {
+		has_active_auction = false;
+
+		AcceptOfferAndGiveFuel(my_vehicle->iID, active_auction.fuel_amount);
+		SET_AUX_TEXT("zakonczono_transakcje");
+	}
+
 	for (auto& pair : network_vehicles) {
 		int ID_receiver = pair.first;
 		if (ID_receiver != auction_owner_id) {
@@ -195,15 +202,24 @@ float SendAuctionUpdateToAll(int auction_owner_id)
 			frame.iID_receiver = ID_receiver;
 			frame.transfer_value = active_auction.money_amount;
 			frame.proposed_fueld_amount = active_auction.fuel_amount;
+			frame.remaining_auction_time = active_auction.remaining_time;
 			frame.iID = auction_owner_id;
 
+			if (time_remaining != 0) {
+				frame.remaining_auction_time = time_remaining;
+			}
+
 			int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
 
 		}
 	}
 
 	return 0.f;
 }
+
+
+bool just_created_offer = false;
 
 float TryBuyAuction(int auctioneer_id, float transfer_value_proposed, float fuel_amount_proposed)
 {
@@ -245,6 +261,8 @@ float AdvertiseOffer(int my_id, float transfer_value_proposed, float fueld_propo
 			active_auction.money_amount = frame.transfer_value;
 			active_auction.player_whos_selling = frame.iID;
 			active_auction.player_whos_buying = -1;
+
+			just_created_offer = true;
 
 			int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
 
@@ -394,7 +412,7 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 					active_auction.player_whos_selling = my_vehicle->iID;
 					has_active_auction = true;
 
-					SendAuctionUpdateToAll(frame.iID);
+					SendAuctionUpdateToAll(my_vehicle->iID);
 				}
 			}
 			break;
@@ -467,6 +485,12 @@ void VirtualWorldCycle()
 
 		sprintf(par_view.inscription1, " %0.0f_fps, fuel = %0.2f, money = %d,", fFps, my_vehicle->state.amount_of_fuel, my_vehicle->state.money);
 		if (counter_of_simulations % 500 == 0) sprintf(par_view.inscription2, "");
+		
+		if (just_created_offer) {
+			active_auction.remaining_time = Auction::INITIAL_AUCTION_TIMEOUT;
+			just_created_offer = false;
+		}
+		active_auction.remaining_time -= (long)(VW_cycle_time - prev_time);
 	}
 
 	terrain.DeleteObjectsFromSectors(my_vehicle);
@@ -531,7 +555,17 @@ void VirtualWorldCycle()
 	}
 
 	//if (active_auction)
-	SET_TIMER_TEXT("Licytacja:_czas_pozostal:_%ll_", active_auction.remaining_time);
+	if (has_active_auction) {
+		SET_TIMER_TEXT("Licytacja:_czas_pozostal:___%ld_____", active_auction.remaining_time);
+		if (active_auction.player_whos_selling == my_vehicle->iID) {
+			if (active_auction.remaining_time < 0) {
+				SendAuctionUpdateToAll(my_vehicle->iID, -10000);
+			}
+		}
+	}
+	else {
+		SET_TIMER_TEXT("brak licytacji");
+	}
 
 	if (try_to_advertise_offer) {
 		AdvertiseOffer(my_vehicle->iID, my_vehicle->proposed_money_amount, my_vehicle->proposed_fuel_amount);
@@ -539,7 +573,7 @@ void VirtualWorldCycle()
 	}
 
 	if (has_active_auction) {
-		SET_AUCTION_TEXT("Gracz_%d_oferuje_%f_paliwa_za_%f");
+		SET_AUCTION_TEXT("Gracz_%d_oferuje_%f_paliwa_za_%f", active_auction.player_whos_buying, active_auction.fuel_amount, active_auction.money_amount);
 
 
 		SET_AUX_TEXT("Twoja_oferta:_%f_za_%f.", my_vehicle->proposed_money_amount, active_auction.fuel_amount);
@@ -558,20 +592,20 @@ void VirtualWorldCycle()
 		try_reject_auction = false;
 	}
 
-	if (auction_offer_responded) {
-		if (auction_offer_accepted) {
-			AcceptOfferAndGiveFuel(my_vehicle->iID, active_auction.fuel_amount);
-			SET_AUX_TEXT("zakonczono_transakcje");
-		}
-		else {
-			SET_AUCTION_TEXT("Odrzucono ofertę gracza %d.", my_vehicle->iID);
-		}
-		auction_offer_accepted = false;
-	}
+	//if (auction_offer_responded) {
+	//	if (auction_offer_accepted) {
+	//		AcceptOfferAndGiveFuel(my_vehicle->iID, active_auction.fuel_amount);
+	//		SET_AUX_TEXT("zakonczono_transakcje");
+	//	}
+	//	else {
+	//		SET_AUCTION_TEXT("Odrzucono ofertę gracza %d.", my_vehicle->iID);
+	//	}
+	//	auction_offer_accepted = false;
+	//}
 
-	if (has_an_auction_to_confirm) {
+	/*if (has_an_auction_to_confirm) {
 		SET_AUX_TEXT("gracz_%d_czeka_na_odpowiedz", active_auction.player_whos_buying);
-	}
+	}*/
 }
 
 // *****************************************************************
@@ -979,11 +1013,11 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 				try_buy_auction = true;
 				responded_to_auction = true;
 			}
-			if (has_an_auction_to_confirm && active_auction.player_whos_buying != my_vehicle->iID) {
+			/*if (has_an_auction_to_confirm && active_auction.player_whos_buying != my_vehicle->iID) {
 				auction_offer_accepted = true;
 				auction_offer_responded = true;
 				has_an_auction_to_confirm = false;
-			}
+			}*/
 			break;
 		}
 
