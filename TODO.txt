@@ -1,0 +1,14 @@
+obecny agent (uruchamiany Y) - tylko jeŸdzi z pe³n¹ moc¹ do przodu
+
+metoda AutoPilot::Autocontrol() --> nale¿y uzupe³niæ
+mamy wskaŸnik do Terenu - ma informacje o ukszta³towaniu terenu i przedmiotach któe siê znajduj¹ (w tablicy p s¹ przedmioty)
+wektory forward i right --> wektory lokalne pojazdu; wektor up te¿ jest
+parametry sterowania: mo¿na modyfikowaæ by sterowaæ naszym pojazdem; do tej pory by³y u¿wane w funkcji obs³ugi komunikatów WND_PROC;
+tutaj mo¿emy je zmieniaæ u¿ywaj¹æ agenta (Autopilota)
+F - si³a napêdowa
+ob->breaking_degree = 0;             // si³a hamowania
+ob->state.wheel_turn_angle = 0;      // k¹t skrêtu kierownicy
+ob->wheel_turn_speed = 0;            // prêdkoœæ skrêtu kierownicy (dodatnia - w lewo, ujemna w prawo)
+
+jeœli pozwolimy ustawiaæ k¹t skrêtu kó³ bezpoœrednio, to bêdzie s³¹be, lepszymi parametrami jest prêdkoœæ skrêtu kierownicy
+
