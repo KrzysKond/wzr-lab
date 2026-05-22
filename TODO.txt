@@ -10,8 +10,7 @@ ob->breaking_degree = 0;             // si³a hamowania
 ob->state.wheel_turn_angle = 0;      // k¹t skrêtu kierownicy
 ob->wheel_turn_speed = 0;            // prêdkoœæ skrêtu kierownicy (dodatnia - w lewo, ujemna w prawo)
 
-jeœli pozwolimy ustawiaæ k¹t skrêtu kó³ bezpoœrednio, to bêdzie s³¹be, lepszymi parametrami jest prêdkoœæ skrêtu kierownicy
-ale jak trzeba mo¿na po prostu u¿ywaæ F, wheel_turn_angle i breaking_degree
+mo¿na po prostu u¿ywaæ F, wheel_turn_angle i breaking_degree - wystarczy!
 
 
 Czêœæ podstawowa:
@@ -35,6 +34,6 @@ Czêœæ dodatkowa:
 Wspó³praca:
 Do algorytmu autonomicznego sterowania pojazdem nale¿y dodaæ mo¿liwoœæ kupna/sprzeda¿y paliwa 
 gdy agentowi brakuje paliwa lub ma go nadmiar. Cena sprzeda¿y powinna byæ uzale¿niona od proporcji 
-obu dóbr u obu kontrahentów i zwykle powinna byæ wy¿sza od ceny rynkowej, gdy kupuj¹cemu brakuje paliwa, 
+obu dóbr u obu kontrahentów i zwykle powinna byæ wy¿sza od ceny rynkowej, gdy kupuj¹cemu brakuje paliwa, m kMJKMkmkkm
 a ni¿sza, gdy sprzedaj¹cy chce siê pozbyæ nadmiaru paliwa
 
