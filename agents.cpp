@@ -7,7 +7,6 @@
 extern MovableObject *my_vehicle;
 extern std::map<int, MovableObject*> network_vehicles;
 extern float TransferSending(int ID_receiver, int transfer_type, float transfer_value);
-// transfer_type: 0=MONEY, 1=FUEL (zgodnie z enum transfer_types w main.cpp)
 
 
 AutoPilot::AutoPilot()
@@ -15,22 +14,18 @@ AutoPilot::AutoPilot()
 
 }
 
-// Oblicza cene paliwa na podstawie proporcji dobr u obu stron.
-// Cena bazowa: 1 jednostka paliwa = kBasePrice pieniedzy.
-// Gdy kupujacy ma malo paliwa (duze zapotrzebowanie) -> cena rosnie.
-// Gdy sprzedajacy ma nadmiar paliwa (chce sie pozbyc) -> cena spada.
 static float FuelPrice(float myFuel, float myMoney, float theirFuel, float theirMoney)
 {
-    constexpr float kBasePrice = 50.0f;  // cena rynkowa za 1 jednostke paliwa
-    // proporcja paliwa do pieniedzy u kupujacego (im mniej paliwa wzgledem pieniedzy, tym wyzej placi)
+    constexpr float kBasePrice = 50.0f;
+
     float buyerRatio  = (myMoney   > 0.0f) ? myFuel   / myMoney   : 0.0f;
-    // proporcja paliwa do pieniedzy u sprzedajacego (im wiecej paliwa wzgledem pieniedzy, tym taniej sprzedaje)
     float sellerRatio = (theirMoney > 0.0f) ? theirFuel / theirMoney : 1.0f;
 
     float factor = 1.0f;
-    if (buyerRatio  < 0.01f) factor *= 1.5f;   // kupujacy ma malo paliwa -> drogo
+    if (buyerRatio  < 0.01f) factor *= 1.5f;
     else if (buyerRatio < 0.05f) factor *= 1.2f;
-    if (sellerRatio > 0.05f) factor *= 0.8f;    // sprzedajacy ma nadmiar -> tanio
+    
+    if (sellerRatio > 0.05f) factor *= 0.8f;
     else if (sellerRatio > 0.02f) factor *= 0.9f;
 
     return kBasePrice * factor;
@@ -39,8 +34,8 @@ static float FuelPrice(float myFuel, float myMoney, float theirFuel, float their
 void AutoPilot::AutoControl(MovableObject* ob)
 {
     constexpr float kLowFuel    = 5.0f;
-    constexpr float kHighFuel   = 15.0f;  // nadmiar paliwa - mozna sprzedac
-    constexpr float kTradeFuel  = 3.0f;   // ilosc paliwa w jednej transakcji
+    constexpr float kHighFuel   = 15.0f;
+    constexpr float kTradeFuel  = 3.0f;
     constexpr float kStopDist   = 3.0f;
     constexpr float kMinDist    = 0.001f;
 
@@ -56,7 +51,6 @@ void AutoPilot::AutoControl(MovableObject* ob)
     Vector3 forward = ob->state.qOrient.rotate_vector(Vector3(1, 0, 0));
     Vector3 right   = ob->state.qOrient.rotate_vector(Vector3(0, 0, 1));
 
-    // --- Logika handlu paliwem z innymi agentami ---
     if (!network_vehicles.empty())
     {
         for (auto& kv : network_vehicles)
@@ -73,22 +67,17 @@ void AutoPilot::AutoControl(MovableObject* ob)
 
             if (myFuel < kLowFuel && theirFuel > kHighFuel && myMoney >= price * kTradeFuel)
             {
-                // Mamy malo paliwa, sasiad ma duzo -> kupujemy: wysylamy mu pieniadze
-                // Sasiad (tez autonomiczny) powinien odwzajemnic sie paliwem
-                TransferSending(neighbor->iID, 0 /*MONEY*/, price * kTradeFuel);
-                break;  // jedna transakcja na krok
+                TransferSending(neighbor->iID, 0, price * kTradeFuel);
+                break;
             }
             else if (myFuel > kHighFuel && theirFuel < kLowFuel && theirMoney >= price * kTradeFuel)
             {
-                // Mamy nadmiar paliwa, sasiad ma malo -> sprzedajemy: wysylamy mu paliwo
-                // Sasiad powinien odwzajemnic sie pieniedzmi (jesli tez ma logike handlu)
-                TransferSending(neighbor->iID, 1 /*FUEL*/, kTradeFuel);
-                break;  // jedna transakcja na krok
+                TransferSending(neighbor->iID, 1, kTradeFuel);
+                break;
             }
         }
     }
 
-    // --- Standardowa logika jazdy po przedmioty ---
     int   bestIdx   = -1;
     float bestScore = -1.0f;
 
