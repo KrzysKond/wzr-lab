@@ -56,6 +56,22 @@ bool L_pressed = 0;
 // Parametry widoku:
 extern ViewParameters par_view;
 
+
+template<typename... Args>
+inline int SafeSprintf(char* buffer, size_t buffer_size, const char* format, Args... args) {
+	memset(buffer, 0, buffer_size);
+	return _snprintf(buffer, buffer_size - 1, format, args...);
+}
+#define SAFE_SPRINTF(buf, fmt, ...) SafeSprintf(buf, 512, fmt, __VA_ARGS__)
+
+#define SET_INSCRIPTION1(fmt, ...) SafeSprintf(par_view.inscription1, 512, fmt, __VA_ARGS__)
+#define SET_INSCRIPTION2(fmt, ...) SafeSprintf(par_view.inscription2, 512, fmt, __VA_ARGS__)
+#define SET_OFFER_TEXT(fmt, ...) SafeSprintf(par_view.offer_text, 512, fmt, __VA_ARGS__)
+#define SET_AUCTION_TEXT(fmt, ...) SafeSprintf(par_view.auction_text, 512, fmt, __VA_ARGS__)
+#define SET_INFO_TEXT(fmt, ...) SafeSprintf(par_view.info_text, 512, fmt, __VA_ARGS__)
+#define SET_AUX_TEXT(fmt, ...) SafeSprintf(par_view.aux_text, 512, fmt, __VA_ARGS__)
+#define SET_TIMER_TEXT(fmt, ...) SafeSprintf(par_view.time_text, 512, fmt, __VA_ARGS__)
+
 bool mouse_control = 0;                   // sterowanie pojazdem za pomoc¹ myszki
 int cursor_x, cursor_y;                   // polo¿enie kursora myszki w chwili w³¹czenia sterowania
 bool map_shift_mode = false;              // tryb przesuwania mapy
@@ -232,6 +248,16 @@ void VirtualWorldCycle()
 {
 	counter_of_simulations++;
 
+	//if (my_vehicle->proposed_fuel_price_by_other != 0.f) {
+	//	SET_OFFER_TEXT("Otrzymano_oferte:_%0.2f_za_litr_paliwa", my_vehicle->proposed_fuel_price_by_other);
+	//}
+	//else if (my_vehicle->proposed_money_by_other != 0.f) {
+	//	SET_OFFER_TEXT("Otrzymano_oferte:_%d_gotowki", (int)my_vehicle->proposed_money_by_other);
+	//}
+	//else {
+	//	SET_OFFER_TEXT("Brak_ofert_tranzakcji");
+	//}
+
 	// obliczenie œredniego czasu pomiêdzy dwoma kolejnnymi symulacjami po to, by zachowaæ  fizycznych 
 	if (counter_of_simulations % 50 == 0)          // jeœli licznik cykli przekroczy³ pewn¹ wartoœæ, to
 	{                                   // nale¿y na nowo obliczyæ œredni czas cyklu fDt
@@ -363,21 +389,32 @@ float TransferSending(int ID_receiver, int transfer_type, float transfer_value)
 	// tutaj nale¿a³oby uzyskaæ potwierdzenie przekazu zanim sumy zostan¹ odjête
 	if (transfer_type == MONEY)
 	{
+		int money = my_vehicle->state.money;
 		if (my_vehicle->state.money < transfer_value)
 			frame.transfer_value = my_vehicle->state.money;
 		my_vehicle->state.money -= frame.transfer_value;
 		sprintf(par_view.inscription2, "Przelew_gotowki_ %f _na_rzecz_ID_ %d", transfer_value, ID_receiver);
+		SET_AUCTION_TEXT("Przelano__%f__gotowki__dla__%d", frame.transfer_value, ID_receiver);
+		int gotowka = my_vehicle->state.money;
+		SET_INFO_TEXT("Gotowka_przed__%f__gotowka_po__%d__", money, gotowka);
 	}
 	else if (transfer_type == FUEL)
 	{
+		float fuel = my_vehicle->state.amount_of_fuel;
 		if (my_vehicle->state.amount_of_fuel < transfer_value)
 			frame.transfer_value = my_vehicle->state.amount_of_fuel;
 		my_vehicle->state.amount_of_fuel -= frame.transfer_value;
 		sprintf(par_view.inscription2, "Przekazanie_paliwa_w_ilosci_ %f _na_rzecz_ID_ %d", transfer_value, ID_receiver);
+		SET_AUCTION_TEXT("Sprzedano__%f__paliwa__dla__%d", frame.transfer_value, ID_receiver);
+		SET_INFO_TEXT("Paliwo_przed__%f__paliwo__po__%f", fuel, my_vehicle->state.amount_of_fuel);
 	}
 
 	if (frame.transfer_value > 0)
 		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
+	//my_vehicle->proposed_money_by_other = 0;
+	//my_vehicle->proposed_fuel_price_by_other = 0;
+
 
 	return frame.transfer_value;
 }

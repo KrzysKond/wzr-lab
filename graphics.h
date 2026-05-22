@@ -32,7 +32,18 @@ struct ViewParameters
 	float shift_to_bottom;                                 // przesunięcie do dołu (w górę o wart. ujemnej)          i widok z góry (klawisz Q)  
 	float tempor_shift_to_right, tempor_shift_to_bottom;   // wartości chwilowe (w trakcie przesuwania)
 	char inscription1[512], inscription2[512];             // napisy w trybie graficznym
+	char offer_text[512], auction_text[512];
+
+	char info_text[512], aux_text[512];
+
+	char time_text[512];
+
+	char team_text[512];
 };
+
+
+
+
 
 void StandardViewParametersSetting(ViewParameters *p);
 

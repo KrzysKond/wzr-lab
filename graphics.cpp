@@ -148,6 +148,21 @@ void DrawScene()
 	glPrint("%s", par_view.inscription1);
 	glRasterPos2f(5.0, -7.0);
 	glPrint("%s", par_view.inscription2);
+	glRasterPos2f(2.0, -18.0);
+	glPrint("%s", par_view.offer_text);
+	glRasterPos2f(5.0, -12.0);
+	glPrint("%s", par_view.auction_text);
+
+	glRasterPos2f(5.0, -16.0);
+	glPrint("%s", par_view.info_text);
+	glRasterPos2f(15.0, -11.0);
+	glPrint("%s", par_view.aux_text);
+
+	glRasterPos2f(2.0, -15.0);
+	glPrint("%s", par_view.time_text);
+
+	glRasterPos2f(15.0, -5.0);
+	glPrint("%s", par_view.team_text);
 	glLoadIdentity();
 
 	Vector3 pol_k, kierunek_k, pion_k;
