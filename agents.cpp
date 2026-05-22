@@ -28,11 +28,61 @@ void AutoPilot::AutoControl(MovableObject *ob)
 
 
 	// TUTAJ NALE¯Y UMIEŒCIÆ ALGORYTM AUTONOMICZNEGO STEROWANIA POJAZDEM
-	// .................................................................
-	// .................................................................
-	// .................................................................
-	// .................................................................
-	// .................................................................
+
+	const float LOW_FUEL = 20.0f;   // próg niskiego paliwa
+
+	// --- wybór celu (system regu³owy) ---
+	int target_idx = -1;
+	float best_score = -1e30f;
+
+	for (long i = 0; i < teren->number_of_items; i++)
+	{
+		Item& prz = przedmioty[i];
+		if (!prz.to_take || prz.if_taken_by_me) continue;
+
+		bool want_fuel = (ob->state.amount_of_fuel < LOW_FUEL);
+		bool is_barrel = (prz.type == ITEM_BARREL);
+		bool is_coin   = (prz.type == ITEM_COIN);
+
+		if (want_fuel && !is_barrel) continue;   // ma³o paliwa -> tylko beczki
+		if (!want_fuel && !is_coin)  continue;   // du¿o paliwa -> tylko monety
+
+		Vector3 diff = prz.vPos - ob->state.vPos;
+		float dist = diff.length();
+		if (dist < 0.001f) dist = 0.001f;
+
+		// wynik: wartoœæ / odleg³oœæ (im bli¿ej i cenniejszy, tym lepszy)
+		float score = prz.value / dist;
+		if (score > best_score)
+		{
+			best_score = score;
+			target_idx = (int)i;
+		}
+	}
+
+	// --- sterowanie w kierunku celu ---
+	if (target_idx >= 0)
+	{
+		Vector3 diff = przedmioty[target_idx].vPos - ob->state.vPos;
+		float dist = diff.length();
+
+		float dot_f = diff ^ vect_local_forward;   // iloczyn skalarny
+		float dot_r = diff ^ vect_local_right;
+
+		float alfa = acosf(dot_f / dist);           // k¹t [0, PI]
+
+		// znak: przedmiot z prawej -> skrêt w prawo (ujemny)
+		if (dot_r > 0.0f) alfa = -alfa;
+
+		ob->state.wheel_turn_angle = alfa;
+
+		// hamuj gdy bardzo blisko celu
+		if (dist < 3.0f)
+		{
+			ob->F = 0;
+			ob->breaking_degree = 1.0f;
+		}
+	}
 
 
 }
@@ -134,5 +184,4 @@ void AutoPilot::ParametersSimAnnealing(long number_of_epochs, float krok_czasowy
 	for (long i = 0; i < number_of_params; i++)
 		fprintf(f, "par[%d] = %3.10f;\n", i, par[i]);
 	fclose(f);
-
-}
+} 
