@@ -11,4 +11,30 @@ ob->state.wheel_turn_angle = 0;      // k¹t skrêtu kierownicy
 ob->wheel_turn_speed = 0;            // prêdkoœæ skrêtu kierownicy (dodatnia - w lewo, ujemna w prawo)
 
 jeœli pozwolimy ustawiaæ k¹t skrêtu kó³ bezpoœrednio, to bêdzie s³¹be, lepszymi parametrami jest prêdkoœæ skrêtu kierownicy
+ale jak trzeba mo¿na po prostu u¿ywaæ F, wheel_turn_angle i breaking_degree
+
+
+Czêœæ podstawowa:
+Je¿d¿enie samochodem, zbieranie paliwa
+stworzyæ system regu³owy - jak jest ma³o paliwa, to jedŸ po paliwo; w przeciwnym wypadku jedŸ po monety
+
+zbieranie monet:
+optymalizacja zysku - maj¹ ró¿n¹ wartoœæ, mo¿ê czasem lepiej jechaæ do dalszej i dro¿szej; mo¿e nie; mo¿na jakieœ wagi
+
+Jak wybierzemy target przedmiot, dobieramy odpowiednie parametry ruchu by do niego dojechaæ
+Jak ustawiæ k¹t skrêtu:
+wektor pomiêdzy œrodkiem pojazdu a przemiotu:
+x = p[i].vPos - vehicle.vPos
+k¹t miêdzy forward a x: z iloczynu skalarnego: alfa = acos * (x ^ forward) / (|x| * |forward|))
+czy przedmiot z lewej czy z prawej strony: x ^ right > 0 -> przedmiot z prawej;
+x ^ forward > 0 -> przdmiot z ty³u
+k¹t skrêtu kó³ mniej wiêcej k¹t alfa
+
+
+Czêœæ dodatkowa:
+Wspó³praca:
+Do algorytmu autonomicznego sterowania pojazdem nale¿y dodaæ mo¿liwoœæ kupna/sprzeda¿y paliwa 
+gdy agentowi brakuje paliwa lub ma go nadmiar. Cena sprzeda¿y powinna byæ uzale¿niona od proporcji 
+obu dóbr u obu kontrahentów i zwykle powinna byæ wy¿sza od ceny rynkowej, gdy kupuj¹cemu brakuje paliwa, 
+a ni¿sza, gdy sprzedaj¹cy chce siê pozbyæ nadmiaru paliwa
 
