@@ -122,7 +122,7 @@ M =  [ w^2 + x^2 - y^2 - z^2       2xy - 2wz                   2xz + 2wy
        2xy + 2wz                   w^2 - x^2 + y^2 - z^2       2yz - 2wx
        2xz - 2wy                   2yz + 2wx                   w^2 - x^2 - y^2 + z^2 ]
 */
-Vector3 quaternion::obroc_wektor(Vector3 V)       
+Vector3 quaternion::rotate_vector(Vector3 V)       
 { 
     Vector3 Vo;
 

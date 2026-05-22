@@ -14,9 +14,6 @@ struct ObjectState
 	Vector3 vV_angular, vA_angular;   // predkosc i przyspeszenie liniowe
 	float wheel_turn_angle;     // front wheels rotation angle  (positive - to the left)
 
-	float fuel_collection_skills;   // umiejêtnoœæ zbierania paliwa
-    float money_collection_skills;  // umiejêtnoœæ zbierania pieniêdzy 
-
 	float mass_total;          // masa ca³kowita (wa¿na przy kolizjach)
 	long money;
 	float amount_of_fuel;
@@ -34,25 +31,31 @@ public:
 
 	// parametry akcji:
 	float F;                  // F - si³a pchajaca do przodu (do ty³u ujemna)
-	float breaking_degree;                // stopieñ hamowania Fh_max = tarcie*Fy*breaking_degree
+	float breaking_degree;                // stopieñ hamowania Fh_max = friction_ground*Fy*breaking_degree
 	//float wheel_turn_angle;               // kat skretu kol w radianach (w lewo - dodatni)
-	float steer_wheel_speed;      // steering wheel speed [rad/s]
-	bool if_keep_steer_wheel;
+	float wheel_turn_speed;      // steering wheel speed [rad/s]
+	bool if_keep_steer_wheel;    // czy kierownica zablokowana (jeœli nie, to wraca do po³o¿enia standardowego)
+
+	// parametry sta³e:
+	float planting_skills,    // umiejêtnoœæ sadzenia drzew (1-pe³na, 0- brak)
+		fuel_collection_skills,   // umiejêtnoœæ zbierania paliwa
+		money_collection_skills;
 
 	bool if_selected;            // czy obiekt zaznaczony  
 
 	// parametry fizyczne pojazdu:
 	float F_max;
-	float alfa_max;
+	float alpha_max;
 	float Fy;                 // si³a nacisku na podstawê pojazdu - gdy obiekt styka siê z pod³o¿em (od niej zale¿y si³a hamowania)
 	float mass_own;		  // masa w³asna obiektu (bez paliwa)	
 	//float mass_total;          // masa ca³kowita (wa¿na przy kolizjach)
-	float length, szerokosc, height; // rozmiary w kierunku lokalnych osi x,y,z
+	float length, width, height; // rozmiary w kierunku lokalnych osi x,y,z
 	float radius;            // radius minimalnej sfery, w ktora wpisany jest obiekt
 	float clearance;           // wysokoœæ na której znajduje siê podstawa obiektu (przeœwit)
 	float front_axis_dist;           // odleg³oœæ od przedniej osi do przedniego zderzaka 
 	float back_axis_dist;             // odleg³oœæ od tylniej osi do tylniego zderzaka 
 	float wheel_ret_speed;  // steering wheel return speed[rad / s]
+	float tank_capacity;    // amount of fuel which can be tanked 
 
 	// inne: 
 	int iID_collider;            // identyfikator pojazdu z którym nast¹pi³a kolizja (-1  brak kolizji)
@@ -67,10 +70,6 @@ public:
 	float time_of_simulation;     // czas sumaryczny symulacji obiektu   
 	Terrain *terrain;             // wskaŸnik do terrainu, do którego przypisany jest obiekt
 
-
-	float proposed_money_amount = 40;
-	float proposed_fuel_amount = 3;
-
 public:
 	MovableObject(Terrain *t);          // konstruktor
 	~MovableObject();
@@ -83,35 +82,35 @@ public:
 
 enum ItemTypes { ITEM_COIN, ITEM_BARREL, ITEM_TREE, ITEM_BUILDING, ITEM_POINT, ITEM_EDGE, ITEM_START_PLACE, ITEM_WALL, ITEM_GATE };
 //char *PRZ_nazwy[] = { "moneta", "beczka", "drzewo", "punkt", "krawedz", "miejsce startowe", "mur", "bramka" };
-enum TreeSubtypes { TREE_POPLAR, TREE_SPRUCE, TREE_BAOBAB, TREE_FANTAZJA };
+enum TreeSubtypes { TREE_POPLAR, TREE_SPRUCE, TREE_BAOBAB, TREE_FANTAZJA};
 //char *DRZ_nazwy[] = { "topola", "swierk", "baobab", "fantazja" };
-enum PointSubtypes {PUN_ZWYKLY, PUN_KRAWEDZI, PUN_WODY};
+enum PointSubtypes {POINT_ORDINAL, POINT_OF_EDGE, POINT_OF_WATER, POINT_OF_VEHICLE};
 
 struct Item
 {
-	Vector3 vPos;             // position obiektu
-	quaternion qOrient;       // orientacja (position katowe)
+	Vector3 vPos;                  // po³o¿enie œrodka obiektu
+	quaternion qOrient;            // orientacja (po³o¿enie katowe, praktycznie nieu¿ywane)
 
 	int type;
 	int subtype;
-	long index;                 // identyfikator - numer przedmiotu (jest potrzebny przy przesy³aniu danych z tego wzglêdu,
+	long index;                    // identyfikator - numer przedmiotu (jest potrzebny przy przesy³aniu danych z tego wzglêdu,
 	//    ¿e wyszukiwanie przedmiotów (np. ItemsInRadius()) zwraca wskaŸniki)
 
-	float value;            // w zal. od typu nomina³ monety /ilosc paliwa, itd.
-	float diameter;           // np. grubosc pnia u podstawy, diameter monety
-	float diameter_visual;          // œrednica widocznoœci - sfery, która opisuje przedmiot
-	float param_f[3];        // dodatkowe parametry roznych typow
+	float value;                   // w zal. od typu nomina³ monety /ilosc paliwa, itd.
+	float diameter;                // np. grubosc pnia u podstawy, diameter monety
+	float diameter_visual;         // œrednica widocznoœci - sfery, która opisuje przedmiot
+	float param_f[3];              // dodatkowe parametry roznych typow
 	long param_i[3];
-	bool if_selected;            // czy przedmiot jest zaznaczony przez uzytkownika
-	long group;               // numer grupy do której nale¿y przedmiot;
+	bool if_selected;              // czy przedmiot jest zaznaczony przez uzytkownika
+	long group;                    // numer grupy do której nale¿y przedmiot;
 
-	bool to_take;          // czy przedmiot mozna wziac
-	bool if_taken_by_me;      // czy przedmiot wziety przeze mnie
-	bool if_renewable;      // czy mo¿e siê odnawiaæ w tym samym miejscu po pewnym czasie
-	long taking_time;        // czas wziêcia (potrzebny do przywrócenia)
+	bool to_take;                  // czy przedmiot mozna wziac
+	bool if_taken_by_me;           // czy przedmiot wziety przeze mnie
+	bool if_renewable;             // czy mo¿e siê odnawiaæ w tym samym miejscu po pewnym czasie
+	long taking_time;              // czas wziêcia (potrzebny do przywrócenia)
 
 	
-	unsigned long display_number;   // zgodny z liczba wyœwietleñ po to, by nie powtarzaæ rysowania przedmiotów
+	unsigned long display_number;  // zgodny z liczba wyœwietleñ po to, by nie powtarzaæ rysowania przedmiotów
 };
 
 struct LassoPoint
@@ -120,82 +119,86 @@ struct LassoPoint
 	float y;
 };
 
-class Sektor
+class Sector
 {
 public:
 	long w, k;                    // wiersz i kolumna okreœlaj¹ce po³o¿enie obszaru na nieograniczonej p³aszczyŸnie
-	int liczba_oczek;             // liczba oczek na mapie w poziomie i pionie (potêga dwójki!) 
+	int number_of_cells;             // liczba oczek na mapie w poziomie i pionie (potêga dwójki!) 
 	//float sector_size;        // potrzebny do obliczenia normalnych
 	Item **wp;               // jednowymiarowa tablica wskaŸników do przedmiotów znajduj¹cych siê w pewnym obszarze
 	long number_of_items;      // liczba przedmiotów w obszarze 
 	long number_of_items_max;  // size tablicy przedmiotów z przydzielon¹ pamiêci¹
 
-	float **mapa_wysokosci;         // wysokoœci wierzcho³ków
-	int **typy_naw;                 // typy nawierzchni
-	float **poziom_wody;            // poziom wody w ka¿dym oczku 
-	Vector3 ****Norm;                // wektory normalne do poszczególnych p³aszczyzn (rozdzielczoœæ x wiersz x kolumna x 4 p³aszczyzny);
+	float **map_of_heights;         // wysokoœci wierzcho³ków
+	int ***type_of_surface;                 // typy nawierzchni w ka¿dym trójk¹cie w ka¿dym oczku 
+	float ***level_of_water;            // poziom wody w ka¿dym trójk¹cie w ka¿dym oczku 
+	Vector3 ****normal_vectors;                // wektory normalne do poszczególnych p³aszczyzn (rozdzielczoœæ x wiersz x kolumna x 4 p³aszczyzny);
 
-	float **mapa_wysokosci_edycja;    // mapa w trakcie edycji - powinna byæ widoczna ³¹cznie z dotychczasow¹ map¹
-	Vector3 ****Norm_edycja;   
-	int **typy_naw_edycja;
-	float **poziom_wody_edycja;
-	int liczba_oczek_edycja;
+	float **map_of_heights_in_edit;    // mapa w trakcie edycji - powinna byæ widoczna ³¹cznie z dotychczasow¹ map¹
+	Vector3 ****normal_vectors_in_edit;   
+	int ***type_of_surface_in_edit;
+	float ***level_of_water_in_edit;
+	int number_of_cells_in_edit;
 
 	// podstawowe w³aœciwoœci dla ca³ego sektora, gdyby nie by³o mapy
-	int typ_naw_sek;                              // type nawierzchni gdyby nie by³o mapki
-	float wysokosc_gruntu_sek;
-	float poziom_wody_sek;
+	int default_type_of_surface;                              // type nawierzchni gdyby nie by³o mapki
+	float default_height;                                     // std. poziom gruntu (praktycznie nie u¿ywany)
+	float default_level_of_water;                             // (praktycznie nie u¿ywany)
 
-	MovableObject **wob;                          // tablica obiektów ruchomych, które mog¹ znaleŸæ siê w obszarze w ci¹gu
+	MovableObject **mov_obj;                          // tablica obiektów ruchomych, które mog¹ znaleŸæ siê w obszarze w ci¹gu
 	// kroku czasowego symulacji (np. obiekty b. szybkie mog¹ znaleŸæ siê w wielu obszarach)
-	long liczba_obiektow_ruch;
-	long liczba_obiektow_ruch_max;
+	long number_of_movable_objects;
+	long number_of_movable_objects_max;
 
-	float wysokosc_max;             // maksymalna wysokoœæ terrainu w sektorze -> istotna dla wyznaczenia rozdzielczoœci np. przy widoku z góry
-	int liczba_oczek_wyswietlana;   // liczba oczek (rozdzielczoœæ) aktualnie wyœwietlana, w zal. od niej mo¿na dopasowaæ s¹siednie sektory
+	float height_max;             // maksymalna wysokoœæ terrainu w sektorze -> istotna dla wyznaczenia rozdzielczoœci np. przy widoku z góry
+	int number_of_cells_displayed;   // liczba oczek (rozdzielczoœæ) aktualnie wyœwietlana, w zal. od niej mo¿na dopasowaæ s¹siednie sectors
 	                                // by nie by³o dziur
-	int liczba_oczek_wyswietlana_pop;  // poprzednia liczba oczek, by uzyskaæ pa³ne dopasowanie rozdzielczoœci s¹siaduj¹cych sektorów 
+	int number_of_cells_displayed_prev;  // poprzednia liczba oczek, by uzyskaæ pa³ne dopasowanie rozdzielczoœci s¹siaduj¹cych sektorów 
 	//float radius;                // radius sektora zwykle d³ugoœæ po³owy przek¹tnej kwadratu, mo¿e byæ wiêkszy, gdy w
 	                              // œrodku du¿e ró¿nice wysokoœci lub du¿e przedmioty lub obiekty
 
-	Sektor(){};
-	Sektor(int _loczek, long _w, long _k, bool czy_mapa);
-	~Sektor();
-	void pamiec_dla_mapy(int __liczba_oczek, bool czy_edycja=0);
-	void zwolnij_pamiec_dla_mapy(bool czy_edycja = 0);
-	void wstaw_przedmiot(Item *p);
-	void usun_przedmiot(Item *p);
-	void wstaw_obiekt_ruchomy(MovableObject *o);
-	void usun_obiekt_ruchomy(MovableObject *o);
-	void oblicz_normalne(float sector_size, bool czy_edycja=0);         // obliczenie wektorów normalnych N do p³aszczyzn trójk¹tów, by nie robiæ tego ka¿dorazowo przy odrysowywaniu   
+	Sector(){};
+	Sector(int _numcells, long _w, long _k, bool if_map);
+	~Sector();
+	void memory_for_map(int __number_of_cells, bool if_edit, bool if_map);
+	void memory_for_water(bool if_edit);
+	void memory_for_surf(bool if_edit);
+	void memory_release(bool if_edit = 0);
+	void insert_item(Item *p);
+	void remove_item(Item *p);
+	void insert_movable_object(MovableObject *o);
+	void release_movable_object(MovableObject *o);
+	void calculate_normal_vectors(float sector_size, bool if_edit=0);         // obliczenie wektorów normalnych N do p³aszczyzn trójk¹tów, by nie robiæ tego ka¿dorazowo przy odrysowywaniu   
 };
 
-struct KomorkaTablicy  // komórka tablicy rozproszonej (te¿ mog³aby byæ tablic¹ rozproszon¹)
+struct HashTableCell  // komórka tablicy rozproszonej (te¿ mog³aby byæ tablic¹ rozproszon¹)
 {
-	Sektor **sektory;  // tablica wskaŸników do sektorów (mog¹ zdarzaæ siê konflikty -> w jednej komórce wiele sektorów) 
-	long liczba_sektorow; // liczba sektorów w komórce
-	long rozmiar_pamieci; // liczba sektorów, dla której zarezerwowano pamiêæ
+	Sector **sectors;  // tablica wskaŸników do sektorów (mog¹ zdarzaæ siê konflikty -> w jednej komórce wiele sektorów) 
+	long number_of_sectors; // liczba sektorów w komórce
+	long number_of_sectors_max; // liczba sektorów, dla której zarezerwowano pamiêæ
 };
 
-class SectorsArray      // tablica rozproszona przechowuj¹ca sektory
+class SectorsHashTable      // tablica rozproszona przechowuj¹ca sectors
 {
 	//private:
 public:
-	long liczba_komorek;                                 // liczba komórek tablicy
-	long ogolna_liczba_sektorow;
+	long number_of_cells;                                 // liczba komórek tablicy
+	long general_number_of_sectors;
 	long w_min, w_max, k_min, k_max;                     // minimalne i maksymalne wspó³rzêdne sektorów (przyspieszaj¹ wyszukiwanie)  
-	KomorkaTablicy *komorki;
-	unsigned long wyznacz_klucz(long w, long k);          // wyznaczanie indeksu komórki
+	HashTableCell *cells;
+	unsigned long create_key(long w, long k);          // wyznaczanie indeksu komórki
 
 public:
 
-	SectorsArray();        // na wejœciu konstruktora liczba komórek tablicy
-	~SectorsArray();
+	SectorsHashTable();        // na wejœciu konstruktora liczba komórek tablicy
+	~SectorsHashTable();
 
-	Sektor *znajdz(long w, long k);       // znajdowanie sektora (zwraca NULL jeœli nie znaleziono)
-	Sektor *wstaw(Sektor *s);              // wstawianie sektora do tablicy
-	void usun(Sektor *s);              // usuwanie sektora
+	Sector *find(long w, long k);       // znajdowanie sektora (zwraca NULL jeœli nie znaleziono)
+	Sector *insert(Sector *s);              // wstawianie sektora do tablicy
+	void remove(Sector *s);              // usuwanie sektora
 };
+
+
 
 struct FoldParams
 {
@@ -223,16 +226,19 @@ public:
 	long number_of_items;      // liczba przedmiotów na planszy
 	long number_of_items_max;  // size tablicy przedmiotów
 
-	SectorsArray *ts;
+	SectorsHashTable *ts;
 
 	
-
 	// inne istotne w³aœciwoœci terrainu:
 	float sector_size;        // w [m] zamiast rozmiaru pola
 	float time_of_item_renewing;     // czas w [s] po którym nastêpuje odnowienie siê przedmiotu 
 	bool if_toroidal_world;        // inaczej cyklicznosc -> po dojsciu do granicy przeskakujemy na
 	                              // pocz¹tek terrainu, zarówno w pionie, jak i w poziomie (gdy nie ma granicy, terrain nie mo¿e byæ cykliczny!)
 	float border_x, border_z;   // granica terrainu (jeœli -1 - terrain nieskoñczenie wielki)
+
+	float height_std;            // standardowa wysokoœæ terenu (na razie nie mo¿na jej zmieniaæ)
+	float level_of_water_std;    // standardowy poziom wody (-1e10 oznacza brak wody) 
+	
 
 	// parametry wyœwietlania:
 	float detail_level;                 // stopieñ szczegó³owoœci w przedziale 0,1 
@@ -249,9 +255,11 @@ public:
 	~Terrain();
 	float GroundHeight(float x, float z);      // okreœlanie wysokoœci gruntu dla punktu o wsp. (x,z)
 	float ItemPointHeight(Vector3 pol, Item *prz); // wysokoœæ na jakiej znajdzie siê przeciêcie pionowej linii przech. przez pol na górnej powierzchni przedmiotu
-	float height(Vector3 pol);                 // okreœlenie wysokoœci nad najbli¿szym przedmiotem lub gruntem patrz¹c w dó³ od punktu pol
+	float GeneralHeight(Vector3 pol);                 // okreœlenie wysokoœci nad najbli¿szym przedmiotem lub gruntem patrz¹c w dó³ od punktu pol
 	void SectorCoordinates(long *w, long *k, float x, float z);  // na podstawie wsp. po³o¿enia punktu (x,z) zwraca wsp. sektora 
 	void SectorBeginPosition(float *x, float *z, long w, long k); // na podstawie wspó³rzêdnych sektora (w,k) zwraca po³o¿enie punktu pocz¹tkowego
+	void InsertWater(float x, float z, float poziom_maks);        // wstawianie wody w oczko (funkcja rekurencyjna)
+	float LevelOfWater(float x, float z);                         // poziom wody w podanym punkcie terenu 
 	float HighestSelectedItemHeight(Vector3 pol);
 	Vector3 Cursor3D_CoordinatesWithoutParallax(int X, int Y);
 	void DrawObject();	      // odrysowywanie terrainu 
@@ -264,8 +272,8 @@ public:
 	void DeleteSelectItems();
 	void NewMap();                      // tworzenie nowej mapy (zwolnienie pamiêci dla starej)
 	
-	long ItemsInRadius(Item*** wsk_prz, Vector3 pol, float radius);
+	long ItemsInRadius(Item*** item_tab_pointer, Vector3 pol, float radius);
 	void InsertObjectIntoSectors(MovableObject *ob);
 	void DeleteObjectsFromSectors(MovableObject *ob);
-	long ObjectsInRadius(MovableObject*** wsk_ob, Vector3 pol, float radius);
+	long ObjectsInRadius(MovableObject*** object_tab_pointer, Vector3 pol, float radius);
 };

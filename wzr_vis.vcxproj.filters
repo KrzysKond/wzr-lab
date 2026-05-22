@@ -33,6 +33,9 @@
     <ClCompile Include="vector3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="agents.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="graphics.h">
@@ -50,12 +53,11 @@
     <ClInclude Include="vector3D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="coop.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="agents.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
-    <Text Include="todolab.txt" />
   </ItemGroup>
 </Project>

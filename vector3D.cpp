@@ -97,7 +97,7 @@ bool Vector3::operator==(Vector3 v2)
   return (x==v2.x)&&(y==v2.y)&&(z==v2.z);
 }
 
-Vector3 Vector3::obrot(float wheel_turn_angle,float vn0,float vn1,float vn2)
+Vector3 Vector3::rotation(float wheel_turn_angle,float vn0,float vn1,float vn2)
 {
   float s = sin(wheel_turn_angle), c = cos(wheel_turn_angle);
 
@@ -109,7 +109,7 @@ Vector3 Vector3::obrot(float wheel_turn_angle,float vn0,float vn1,float vn2)
   return w;
 }
 
-Vector3 Vector3::obrot(float wheel_turn_angle,Vector3 os)
+Vector3 Vector3::rotation(float wheel_turn_angle,Vector3 os)
 {
   float s = sin(wheel_turn_angle), c = cos(wheel_turn_angle);
 
@@ -164,17 +164,17 @@ Vector3 normal_vector(Vector3 A,Vector3 B, Vector3 C)
 }
 
 // rzut prostopadly punktu A na plaszczyzne o normalnej N (o dlugosci 1) i punkcie P:  (4 mnozenia)
-Vector3 rzut_punktu_na_pl(Vector3 A, Vector3 N, Vector3 P)
+Vector3 projection_of_point_on_plain(Vector3 A, Vector3 N, Vector3 P)
 {
   float x = N^(A-P);   // odleglosc punktu A od plaszczyzny ze znakiem
   return A - N*x;
 }
 
 // rzut prostopadly punktu P na prosta wyznaczona przez punkty A, B
-Vector3 rzut_punktu_na_prosta(Vector3 P, Vector3 A, Vector3 B)
+Vector3 projection_of_point_on_line(Vector3 P, Vector3 A, Vector3 B)
 {
   //Vector3 N = ((A-B)*((A-B)*(A-P))).znorm();   // normal_vector plaszcz prostop. do kierunku rzutu
-  //return rzut_punktu_na_pl(P,N,A);
+  //return projection_of_point_on_plain(P,N,A);
 	float ilo_skal = (B - A) ^ (B - A);
 	if (ilo_skal == 0) // punkty A i B pokrywaj¹ siê
 		return A;
@@ -183,9 +183,9 @@ Vector3 rzut_punktu_na_prosta(Vector3 P, Vector3 A, Vector3 B)
 }
 
 // najbli¿szy punkt le¿¹cy na odcinku AB do punktu P:
-Vector3 najblizszy_punkt_na_odcinku(Vector3 P, Vector3 A, Vector3 B)
+Vector3 projection_of_point_on_segment(Vector3 P, Vector3 A, Vector3 B)
 {
-	Vector3 R = rzut_punktu_na_prosta(P, A, B);
+	Vector3 R = projection_of_point_on_line(P, A, B);
 	float ilo_skal = (R - A) ^ (R - B);
 	if (ilo_skal > 0)                            // jeœli iloczyn sklarny dodatni, to znaczy, ¿e wektory tak samo skierowane, czyli 
 	{                                            // rzut punktu P poza odcinkiem. W tej sytuacji najbli¿szym punktem jest A lub B
@@ -198,7 +198,7 @@ Vector3 najblizszy_punkt_na_odcinku(Vector3 P, Vector3 A, Vector3 B)
 
 
 // odleglosc pomiêdzy punktem P a prost¹ wyznaczana przez punkty A,B
-float odleglosc_pom_punktem_a_prosta(Vector3 P, Vector3 A, Vector3 B)
+float distance_from_point_to_line(Vector3 P, Vector3 A, Vector3 B)
 {
   /*float l = B.x - A.x, m = B.y - A.y, n = B.z - A.z;
   float liczba1 = (P.x - A.x)*m - (P.y - A.y)*l, liczba2 = (P.y - A.y)*n - (P.z - A.z)*m, liczba3 = (P.z - A.z)*l - (P.x - A.x)*n;
@@ -206,15 +206,15 @@ float odleglosc_pom_punktem_a_prosta(Vector3 P, Vector3 A, Vector3 B)
   if (sigma == 0) return 0;
   else return sqrt(sigma);
   */
-	Vector3 R = rzut_punktu_na_prosta(P, A, B);
+	Vector3 R = projection_of_point_on_line(P, A, B);
 	return (R - P).length();
 }
 
 // ró¿ni siê od poprzedniej funkcji tym, ¿e jest ograniczona do odcinka, czyli jeœli
 // rzut punktu le¿y poza odcinkiem to wynikiem jest odleg³oœæ do najbli¿szego punktu ze zb. {A,B}
-float odleglosc_pom_punktem_a_odcinkiem(Vector3 P, Vector3 A, Vector3 B)
+float distance_from_point_to_segment(Vector3 P, Vector3 A, Vector3 B)
 {
-	Vector3 R = rzut_punktu_na_prosta(P, A, B);
+	Vector3 R = projection_of_point_on_line(P, A, B);
 	float ilo_skal = (R - A) ^ (R - B);
 	if (ilo_skal > 0)                            // jeœli iloczyn sklarny dodatni, to znaczy, ¿e wektory tak samo skierowane, czyli 
 	{                                            // rzut punktu P poza odcinkiem
@@ -226,14 +226,14 @@ float odleglosc_pom_punktem_a_odcinkiem(Vector3 P, Vector3 A, Vector3 B)
 }
 
 // odleglosc punktu A od plaszczyzny o normalnej N (o d³ugoœci 1) i punkcie P: (3 mnozenia)
-float odleglosc_punktu_od_pl(Vector3 A, Vector3 N, Vector3 P)
+float distance_from_point_to_plane(Vector3 A, Vector3 N, Vector3 P)
 {
   return fabs(N^(A-P));   // odleglosc punktu A od plaszczyzny
 }
 
 // Punkt przeciecia prostej wyznaczonej punktami A,B z plaszczyzna o normalnej N (o d³ugoœci 1) i punkcie P (7 mnozen)
 // normal_vector N nie musi byc o dlugosci = 1.
-Vector3 punkt_przec_prostej_z_plaszcz(Vector3 A, Vector3 B, Vector3 N, Vector3 P)
+Vector3 intersection_point_between_line_and_plane(Vector3 A, Vector3 B, Vector3 N, Vector3 P)
 {
   float y = (B-A)^N;
   if (y != 0)
@@ -244,21 +244,21 @@ Vector3 punkt_przec_prostej_z_plaszcz(Vector3 A, Vector3 B, Vector3 N, Vector3 P
 
 // Punkt przeciecia dwoch prostych przy zalozeniu, ze obie proste
 // leza na jednej plaszczyznie. Proste dane w postaci wektorow W (znormalizowane: d³ugoœæ = 1) i punktow P (19 mnozen)
-Vector3 punkt_przec_dwoch_prostych(Vector3 W1, Vector3 P1, Vector3 W2, Vector3 P2)
+Vector3 intersection_point_between_two_lines(Vector3 W1, Vector3 P1, Vector3 W2, Vector3 P2)
 {
   Vector3 N = W1*W2;             // normal_vector do plaszczyzny na ktorej leza obie proste
   Vector3 N2 = N*W1;             // normal_vector do plaszczyzny prostop. do N, na ktorej lezy prosta 1.
-  return punkt_przec_prostej_z_plaszcz(P2, P2+W2, N2, P1);
+  return intersection_point_between_line_and_plane(P2, P2+W2, N2, P1);
 }
 
 // odleg³oœæ pomiêdzy prostymi wyznaczonymi przez punkty AB i CD + punkty le¿¹ce najbli¿ej na ka¿dej z prostych
-float odleglosc_pom_prostymi(Vector3 A, Vector3 B, Vector3 C, Vector3 D, 
+float distance_between_two_lines(Vector3 A, Vector3 B, Vector3 C, Vector3 D, 
              Vector3 *Xab=NULL, Vector3 *Xcd=NULL)
 {
   Vector3 N = ((B-A)*(D-C)); // normal_vector do p³aszczyzny na której le¿y jeden z odcinków np. AB i prostopad³ej do drugiego odcinka np. CD
   if (N.length() == 0) // proste równoleg³e
   {
-    Vector3 Cpri = rzut_punktu_na_pl(C, (B-A).znorm(), A);  // rzut punktu C na p³aszczyznê zawieraj¹c¹ punkty prost. do prostych i przechodz¹c¹ przez A
+    Vector3 Cpri = projection_of_point_on_plain(C, (B-A).znorm(), A);  // rzut punktu C na p³aszczyznê zawieraj¹c¹ punkty prost. do prostych i przechodz¹c¹ przez A
     if ((Xab != NULL)&&(Xcd != NULL))            // jeœli chcemy jeszcze znaæ punkty le¿¹ce najbli¿ej siebie na poszczególnych prostych 
     {    
       *Xab = A;
@@ -269,11 +269,11 @@ float odleglosc_pom_prostymi(Vector3 A, Vector3 B, Vector3 C, Vector3 D,
   else
   {
     Vector3 Nznorm = N.znorm();    
-    Vector3 Cprim = rzut_punktu_na_pl(C, Nznorm, A);  // rzut punktu C na p³aszczyznê zawieraj¹c¹ punkty A,B
+    Vector3 Cprim = projection_of_point_on_plain(C, Nznorm, A);  // rzut punktu C na p³aszczyznê zawieraj¹c¹ punkty A,B
     if ((Xab != NULL)&&(Xcd != NULL))            // jeœli chcemy jeszcze znaæ punkty le¿¹ce najbli¿ej siebie na poszczególnych prostych                                   
     {    
-      Vector3 Dprim = rzut_punktu_na_pl(D, Nznorm, A);  // rzut punktu D na p³aszczyznê zawieraj¹c¹ punkty A,B
-      *Xab = punkt_przec_dwoch_prostych((B-A).znorm(), A, (Dprim-Cprim).znorm(), Cprim);
+      Vector3 Dprim = projection_of_point_on_plain(D, Nznorm, A);  // rzut punktu D na p³aszczyznê zawieraj¹c¹ punkty A,B
+      *Xab = intersection_point_between_two_lines((B-A).znorm(), A, (Dprim-Cprim).znorm(), Cprim);
       *Xcd = *Xab + C - Cprim;   
     }
     return (Cprim-C).length();
@@ -285,7 +285,7 @@ float odleglosc_pom_prostymi(Vector3 A, Vector3 B, Vector3 C, Vector3 D,
 
 // Sprawdzenie czy punkt lezacy na plaszczyznie ABC znajduje sie
 // tez w trojkacie ABC:
-bool czy_w_trojkacie(Vector3 A,Vector3 B, Vector3 C, Vector3 P)
+bool if_point_inside_triangle(Vector3 A,Vector3 B, Vector3 C, Vector3 P)
 {
   // 1.) Z kolejnych bokow wielokata wypuklego (jakim jest tez trojkat)
   //     tworze wektory zwrocone do kolejnych punktow np AB, BC, CA.
@@ -328,7 +328,7 @@ bool czy_w_trojkacie(Vector3 A,Vector3 B, Vector3 C, Vector3 P)
 
 // zwraca kat pomiedzy wektorami w zakresie <0,2pi) w kierunku przeciwnym
 // do ruchu wskazowek zegara. Zakladam, ze Wa.z = Wb.z = 0
-float kat_pom_wekt2D(Vector3 Wa, Vector3 Wb)
+float angle_between_vectors2D(Vector3 Wa, Vector3 Wb)
 {
 
   Vector3 ilo = Wa.znorm2D() * Wb.znorm2D();  // iloczyn wektorowy wektorow o jednostkowej dlugosci
@@ -354,7 +354,7 @@ float kat_pom_wekt2D(Vector3 Wa, Vector3 Wb)
    wyznaczanie punktu przeciecia sie 2 odcinkow AB i CD lub ich przedluzen
    zwraca 1 jesli odcinki sie przecinaja 
 */
-bool punkt_przeciecia2D(float *x,float *y,float xA,float yA, float xB, float yB,
+bool intersection_point2D_between_two_segments(float *x,float *y,float xA,float yA, float xB, float yB,
                         float xC,float yC, float xD, float yD)
 {
   float a1,b1,c1,a2,b2,c2;  // rownanie prostej: ax+by+c=0 
@@ -387,7 +387,7 @@ bool punkt_przeciecia2D(float *x,float *y,float xA,float yA, float xB, float yB,
 
     // b³êdy! Trzeba to naprawiæ
 */
-/*float odleglosc_pom_odcinkami(Vector3 A, Vector3 B, Vector3 C, Vector3 D, 
+/*float distance_between_two_segments(Vector3 A, Vector3 B, Vector3 C, Vector3 D, 
              Vector3 *Xab, Vector3 *Xcd, bool *czy_przeciecie)
 {
   Vector3 AB = A-B, CD = C-D;
@@ -439,7 +439,7 @@ bool punkt_przeciecia2D(float *x,float *y,float xA,float yA, float xB, float yB,
   if (  ( ((AB.x == 0)&&(AB.y == 0))||((CD.x == 0)&&(CD.y == 0)) )||
         ( ((AB.x == 0)&&(AB.z == 0))||((CD.x == 0)&&(CD.z == 0)) )  ) // rzutowanie na x==0 
   {
-       *czy_przeciecie = punkt_przeciecia2D(&xx,&yy,Ap.y,Ap.z,Bp.y,Bp.z,C.y,C.z,D.y,D.z);
+       *czy_przeciecie = intersection_point2D_between_two_segments(&xx,&yy,Ap.y,Ap.z,Bp.y,Bp.z,C.y,C.z,D.y,D.z);
 
        (*Xcd).y = xx;
        (*Xcd).z = yy;
@@ -460,7 +460,7 @@ bool punkt_przeciecia2D(float *x,float *y,float xA,float yA, float xB, float yB,
   }
   else  // rzutowanie na z==0 (choc moglo by byc rowniez na y==0) 
   {
-       *czy_przeciecie = punkt_przeciecia2D(&xx,&yy,Ap.x,Ap.y,Bp.x,Bp.y,C.x,C.y,D.x,D.y);
+       *czy_przeciecie = intersection_point2D_between_two_segments(&xx,&yy,Ap.x,Ap.y,Bp.x,Bp.y,C.x,C.y,D.x,D.y);
 
        (*Xcd).x = xx;
        (*Xcd).y = yy;
@@ -512,23 +512,23 @@ bool punkt_przeciecia2D(float *x,float *y,float xA,float yA, float xB, float yB,
 */
 
 
-void wektory_sprawdzenie_dodatkow()
+void vectors_addition_test()
 {
   FILE *f = fopen("wektor_plik.txt","w");
   Vector3 A(3,4,0), B(0,0,0), C(5,0,0), P1(2,1,10),P2(2,1,12);
   Vector3 N = normal_vector(A,B,C);
-  Vector3 P = punkt_przec_prostej_z_plaszcz(P1,P2,N,A);
-  Vector3 P_prost = rzut_punktu_na_pl(P1,N,A);
-  float odl = odleglosc_punktu_od_pl(P1,N,A);
+  Vector3 P = intersection_point_between_line_and_plane(P1,P2,N,A);
+  Vector3 P_prost = projection_of_point_on_plain(P1,N,A);
+  float odl = distance_from_point_to_plane(P1,N,A);
   fprintf(f,"normal_vector do pl. ABC: N = (%f, %f, %f)\n",N.x,N.y,N.z);
   fprintf(f,"punkt na plaszczyznie P = (%f, %f, %f) po zrzut. punktu P1 w kier. wektora P2P1\n",P.x,P.y,P.z);
   fprintf(f,"rzut prostopadly punktu P1: P_prost = (%f, %f, %f)\n",P_prost.x,P_prost.y,P_prost.z);
-  Vector3 Pp  = rzut_punktu_na_prosta(A,B,C);
+  Vector3 Pp  = projection_of_point_on_line(A,B,C);
   fprintf(f,"rzut punktu A na prosta BC = (%f,%f,%f)\n",Pp.x,Pp.y,Pp.z);
   fprintf(f,"odleglosc P1 od plaszczyzny ABC = %f\n",odl);
   Vector3 X(4,0.1,0);
-  fprintf(f,"czy punkt X w trojkacie = %d\n", czy_w_trojkacie(A,B,C,X));
-  Vector3 Y = punkt_przec_dwoch_prostych(B-A,A,P-C,C);
+  fprintf(f,"czy punkt X w trojkacie = %d\n", if_point_inside_triangle(A,B,C,X));
+  Vector3 Y = intersection_point_between_two_lines(B-A,A,P-C,C);
   fprintf(f,"punkt przeciecia sie prostych AB i PC: Y = (%f, %f, %f)\n",Y.x,Y.y,Y.z);
 
   // sprawdzenie w jaki sposob zmienia sie odleglosc punktu od plaszczyzny opisanej trzema punktami,
@@ -542,7 +542,7 @@ void wektory_sprawdzenie_dodatkow()
     N = normal_vector(A,B,C);
     float zmiana = odl-odl_pop;
     odl_pop = odl;
-    odl = odleglosc_punktu_od_pl(P1,N,A);
+    odl = distance_from_point_to_plane(P1,N,A);
     fprintf(f,"odleglosc = %f, zmiana = %f, zm. zmiany = %f\n",odl,odl-odl_pop, odl-odl_pop - zmiana);
   }
 
@@ -552,10 +552,10 @@ void wektory_sprawdzenie_dodatkow()
   //Vector3 AA(2,3,4), BB(4,1,7), CC(10,12,16), DD(11,17,15);     // punkty najbli¿sze na zewn¹trz odcinków AB i CD
   Vector3 Xab1,Xcd1,Xab2,Xcd2;
   bool b;
-  float odl1 = odleglosc_pom_prostymi(AA, BB, CC, DD, &Xab1,&Xcd1);
-  float odl2 = 0;//odleglosc_pom_odcinkami(AA, BB, CC, DD, &Xab2,&Xcd2,&b);     
+  float odl1 = distance_between_two_lines(AA, BB, CC, DD, &Xab1,&Xcd1);
+  float odl2 = 0;//distance_between_two_segments(AA, BB, CC, DD, &Xab2,&Xcd2,&b);     
 
-  fprintf(f,"porownanie funkcji odleglosc_pom_prostymi i odleglosc_pom_odcinkami:\n");
+  fprintf(f,"porownanie funkcji distance_between_two_lines i distance_between_two_segments:\n");
   fprintf(f,"odl1 = %f, odl2 = %f, Xab1 = (%f,%f,%f), Xab2 = (%f,%f,%f)\n",odl1,odl2, Xab1.x,Xab1.y,Xab1.z,Xab2.x,Xab2.y,Xab2.z);
   fprintf(f,"Xcd1 = (%f,%f,%f), Xcd2 = (%f,%f,%f)\n",Xcd1.x,Xcd1.y,Xcd1.z,Xcd2.x,Xcd2.y,Xcd2.z);
 
@@ -567,9 +567,9 @@ void wektory_sprawdzenie_dodatkow()
 	  for (float tz = -1; tz <= 1; tz += 0.5)
 	  {
 		  Vector3 P = Vector3(tx, 0, tz);
-		  Vector3 PN = najblizszy_punkt_na_odcinku(P, A, B);
-		  //Vector3 R = rzut_punktu_na_prosta(P, A, B);
-		  float odl = odleglosc_pom_punktem_a_odcinkiem(P, A, B);
+		  Vector3 PN = projection_of_point_on_segment(P, A, B);
+		  //Vector3 R = projection_of_point_on_line(P, A, B);
+		  float odl = distance_from_point_to_segment(P, A, B);
 		  fprintf(f, "  tx = %f, tz = %f, odleglosc = %f, PN = (%f, %f, %f)\n", tx, tz, odl, PN.x, PN.y, PN.z);
 	  }
 

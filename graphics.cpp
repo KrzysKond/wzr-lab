@@ -32,7 +32,7 @@ unsigned int font_base;
 
 ViewParameters par_view;
 
-extern void TworzListyWyswietlania();		// definiujemy listy tworzące labirynt
+extern void CreateDisplayLists();		// definiujemy listy tworzące labirynt
 extern void DrawGlobalCoordinateSystem();
 
 void StandardViewParametersSetting(ViewParameters *p)
@@ -44,8 +44,8 @@ void StandardViewParametersSetting(ViewParameters *p)
 	// Zmienne - ustawiane przez użytkownika
 	p->tracking = 1;                             // tryb œledzenia obiektu przez kamerê
 	p->top_view = 0;                          // tryb widoku z gory
-	p->distance = 20.0;                          // distance lub przybli¿enie kamery
-	p->zoom = 1.1;                               // zmiana kąta widzenia
+	p->distance = 24.0;                          // distance lub przybli¿enie kamery
+	p->zoom = 1.0;                               // zmiana kąta widzenia
 	p->cam_angle_z = 0;                            // obrót kamery góra-dół
 
 	p->shift_to_right = 0;                        // przesunięcie kamery w prawo (w lewo o wart. ujemnej) - chodzi głównie o tryb edycji
@@ -67,7 +67,7 @@ int GraphicsInitialization(HDC g_context)
 
 	StandardViewParametersSetting(&par_view);
 
-	TworzListyWyswietlania();		// definiujemy listy tworzące różne elementy sceny
+	CreateDisplayLists();		// definiujemy listy tworzące różne elementy sceny
 	terrain.GraphicsInitialization();
 }
 
@@ -77,12 +77,12 @@ void CameraSettings(Vector3 *position, Vector3 *direction, Vector3 *vertical, Vi
 {
 	if (pw.tracking)  // kamera ruchoma - porusza się wraz z obiektem
 	{
-		(*direction) = my_vehicle->state.qOrient.obroc_wektor(Vector3(1, 0, 0));
-		(*vertical) = my_vehicle->state.qOrient.obroc_wektor(Vector3(0, 1, 0));
-		Vector3 prawo_kamery = my_vehicle->state.qOrient.obroc_wektor(Vector3(0, 0, 1));
+		(*direction) = my_vehicle->state.qOrient.rotate_vector(Vector3(1, 0, 0));
+		(*vertical) = my_vehicle->state.qOrient.rotate_vector(Vector3(0, 1, 0));
+		Vector3 prawo_kamery = my_vehicle->state.qOrient.rotate_vector(Vector3(0, 0, 1));
 
-		(*vertical) = (*vertical).obrot(pw.cam_angle_z, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
-		(*direction) = (*direction).obrot(pw.cam_angle_z, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
+		(*vertical) = (*vertical).rotation(pw.cam_angle_z, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
+		(*direction) = (*direction).rotation(pw.cam_angle_z, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
 		(*position) = my_vehicle->state.vPos - (*direction)*my_vehicle->length * 0 +
 			(*vertical).znorm()*my_vehicle->height * 5;
 		if (pw.top_view)
@@ -98,8 +98,8 @@ void CameraSettings(Vector3 *position, Vector3 *direction, Vector3 *vertical, Vi
 		(*direction) = pw.initial_camera_direction;
 		(*position) = pw.initial_camera_position;
 		Vector3 prawo_kamery = ((*direction)*(*vertical)).znorm();
-		(*vertical) = (*vertical).obrot(pw.cam_angle_z / 20, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
-		(*direction) = (*direction).obrot(pw.cam_angle_z / 20, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
+		(*vertical) = (*vertical).rotation(pw.cam_angle_z / 20, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
+		(*direction) = (*direction).rotation(pw.cam_angle_z / 20, prawo_kamery.x, prawo_kamery.y, prawo_kamery.z);
 		if (pw.top_view)
 		{
 			(*vertical) = Vector3(0, 0, -1);
@@ -116,10 +116,10 @@ void DrawScene()
 	GLfloat OwnObjectColor[] = { 0.0f, 0.0f, 0.9f, 0.7f };
 	GLfloat BlueSurfaceTr[] = { 0.6f, 0.0f, 0.9f, 0.3f };
 
-	GLfloat NetworkVehiclesColor[] = { 0.2f, 0.5f, 0.4f, 0.5f };
-	GLfloat RedSurface[] = { 0.6f, 0.2f, 0.1f, 0.5f };
+	GLfloat NetworkVehiclesColor[] = { 0.4f, 0.6f, 0.4f, 0.6f };
+	GLfloat RedSurface[] = { 0.8f, 0.2f, 0.1f, 0.5f };
 	GLfloat OrangeSurface[] = { 1.0f, 0.8f, 0.0f, 0.7f };
-	GLfloat GreenSurface[] = { 0.35f, 0.62f, 0.1f, 1.0f };
+	GLfloat GreenSurface[] = { 0.45f, 0.62f, 0.1f, 1.0f };
 	GLfloat YellowSurface[] = { 0.75f, 0.75f, 0.0f, 1.0f };
 	GLfloat YellowLight[] = { 2.0f, 2.0f, 1.0f, 1.0f };
 
@@ -142,29 +142,13 @@ void DrawScene()
 
 
 	glLoadIdentity();
-	glClearColor(0.1, 0.1, 0.5, 0.7);   // ustawienie nieczarnego koloru tła
+	glClearColor(0.5, 0.7, 0.99, 0.8);   // ustawienie nieczarnego koloru tła
 	glTranslatef(-24, 24, -40);
-	glRasterPos2f(4.0, -4.0);
+	glRasterPos2f(5.0, -5.0);
 	glPrint("%s", par_view.inscription1);
-	glRasterPos2f(4.0, -6.0);
+	glRasterPos2f(5.0, -7.0);
 	glPrint("%s", par_view.inscription2);
-	glRasterPos2f(2.0, -8.0);
-	glPrint("%s", par_view.offer_text);
-	glRasterPos2f(2.0, -12.0);
-	glPrint("%s", par_view.auction_text);
-
-	glRasterPos2f(2.0, -14.0);
-	glPrint("%s", par_view.info_text);
-	glRasterPos2f(15.0, -11.0);
-	glPrint("%s", par_view.aux_text);
-
-	glRasterPos2f(2.0, -15.0);
-	glPrint("%s", par_view.time_text);
-
-	glRasterPos2f(15.0, -5.0);
-	glPrint("%s", par_view.team_text);
 	glLoadIdentity();
-
 
 	Vector3 pol_k, kierunek_k, pion_k;
 
@@ -212,10 +196,11 @@ void DrawScene()
 			//Release the Critical section
 			LeaveCriticalSection(&m_cs);
 			
-			glDisable(GL_BLEND);
+			//glDisable(GL_BLEND);
 			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, GreenSurface);
 			
 			terrain.DrawObject();
+			glDisable(GL_BLEND);
 			glPopMatrix();
 		}
 
@@ -425,12 +410,12 @@ GLvoid BuildFont(HDC hDC)								// Build Our Bitmap Font
 
 	font_base = glGenLists(96);								// Storage For 96 Characters
 
-	font = CreateFont(-28,							// Height Of Font
+	font = CreateFont(-26,							// Height Of Font
 		0,								// Width Of Font
 		0,								// Angle Of Escapement
 		0,								// Orientation Angle
 		FW_NORMAL,						// Font Weight
-		TRUE,							// Italic
+		FALSE,							// Italic
 		FALSE,							// Underline
 		FALSE,							// Strikeout
 		ANSI_CHARSET,					// Character Set Identifier
@@ -438,7 +423,7 @@ GLvoid BuildFont(HDC hDC)								// Build Our Bitmap Font
 		CLIP_DEFAULT_PRECIS,			// Clipping Precision
 		ANTIALIASED_QUALITY,			// Output Quality
 		FF_DONTCARE | DEFAULT_PITCH,		// Family And Pitch
-		"Courier New");					// Font Name
+		"Albertus");					// Font Name
 
 	oldfont = (HFONT)SelectObject(hDC, font);           // Selects The Font We Want
 	wglUseFontBitmaps(hDC, 31, 96, font_base);				// Builds 96 Characters Starting At Character 32
@@ -465,8 +450,8 @@ GLvoid glPrint(const char *fmt, ...)	// Custom GL "Print" Routine
 	glPopAttrib();			// Pops The Display List Bits
 }
 
-
-void TworzListyWyswietlania()
+// Tworzenie list wyświetlania
+void CreateDisplayLists()
 {
 	glNewList(Wall1, GL_COMPILE);	// GL_COMPILE - lista jest kompilowana, ale nie wykonywana
 

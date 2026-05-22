@@ -15,49 +15,36 @@
 using namespace std;
 
 #include "objects.h"
+#include "agents.h"
 #include "graphics.h"
 #include "net.h"
 
 
-bool if_different_skills = true;          // czy zró¿nicowanie umiejêtnoœci (dla ka¿dego pojazdu losowane s¹ umiejêtnoœci
+bool if_different_skills = false;          // czy zró¿nicowanie umiejêtnoœci (dla ka¿dego pojazdu losowane s¹ umiejêtnoœci
 // zbierania gotówki i paliwa)
+bool if_autonomous_control = false;       // sterowanie autonomiczne pojazdem
 
-FILE* f = fopen("WZR_log.txt", "w");     // plik do zapisu informacji testowych
 
-struct Auction {
-	float fuel_amount = 0;
-	float money_amount = 0;
-	int player_whos_buying = -1;
-	int player_whos_selling = -1;
+FILE *f = fopen("wzr_log.txt", "w");     // plik do zapisu informacji testowych
 
-	long start_time = 0;
-	long end_time = 1;
-	long remaining_time = 0;
-	constexpr static long INITIAL_AUCTION_TIMEOUT = 10000;
-	constexpr static long AUCTION_NEW_OFFER_TIME_RENEWAL = 500;
-};
-Auction active_auction{};
-
-MovableObject* my_vehicle;             // Object przypisany do tej aplikacji
+MovableObject *my_vehicle;             // Object przypisany do tej aplikacji
 
 Terrain terrain;
 map<int, MovableObject*> network_vehicles;
-bool has_an_auction_to_confirm = false;
-bool auction_offer_responded = false;
-bool auction_offer_accepted = false;
+
+AutoPilot *ap;
+
 float fDt;                          // sredni czas pomiedzy dwoma kolejnymi cyklami symulacji i wyswietlania
 long VW_cycle_time, counter_of_simulations;     // zmienne pomocnicze potrzebne do obliczania fDt
 long start_time = clock();          // czas od poczatku dzialania aplikacji  
 long group_existing_time = clock();    // czas od pocz¹tku istnienia grupy roboczej (czas od uruchom. pierwszej aplikacji)      
 
-multicast_net* multi_reciv;         // wsk do obiektu zajmujacego sie odbiorem komunikatow
-multicast_net* multi_send;          //   -||-  wysylaniem komunikatow
+multicast_net *multi_reciv;         // wsk do obiektu zajmujacego sie odbiorem komunikatow
+multicast_net *multi_send;          //   -||-  wysylaniem komunikatow
 
 HANDLE threadReciv;                 // uchwyt w¹tku odbioru komunikatów
 extern HWND main_window;
 CRITICAL_SECTION m_cs;               // do synchronizacji wątków
-
-int chosen_player = 0;
 
 bool SHIFT_pressed = 0;
 bool CTRL_pressed = 0;
@@ -70,219 +57,51 @@ bool L_pressed = 0;
 extern ViewParameters par_view;
 
 bool mouse_control = 0;                   // sterowanie pojazdem za pomoc¹ myszki
-int cursor_x, cursor_y;                         // polo¿enie kursora myszki w chwili w³¹czenia sterowania
-bool try_to_advertise_offer = false;
-bool responded_to_auction = false;
-bool try_buy_auction = false;
-bool try_reject_auction = false;
-bool has_active_auction = false;
+int cursor_x, cursor_y;                   // polo¿enie kursora myszki w chwili w³¹czenia sterowania
+bool map_shift_mode = false;              // tryb przesuwania mapy
 
-template<typename... Args>
-inline int SafeSprintf(char* buffer, size_t buffer_size, const char* format, Args... args) {
-	memset(buffer, 0, buffer_size);
-	return _snprintf(buffer, buffer_size - 1, format, args...);
-}
-#define SAFE_SPRINTF(buf, fmt, ...) SafeSprintf(buf, 512, fmt, __VA_ARGS__)
-
-#define SET_INSCRIPTION1(fmt, ...) SafeSprintf(par_view.inscription1, 512, fmt, __VA_ARGS__)
-#define SET_INSCRIPTION2(fmt, ...) SafeSprintf(par_view.inscription2, 512, fmt, __VA_ARGS__)
-#define SET_OFFER_TEXT(fmt, ...) SafeSprintf(par_view.offer_text, 512, fmt, __VA_ARGS__)
-#define SET_AUCTION_TEXT(fmt, ...) SafeSprintf(par_view.auction_text, 512, fmt, __VA_ARGS__)
-#define SET_INFO_TEXT(fmt, ...) SafeSprintf(par_view.info_text, 512, fmt, __VA_ARGS__)
-#define SET_AUX_TEXT(fmt, ...) SafeSprintf(par_view.aux_text, 512, fmt, __VA_ARGS__)
-#define SET_TIMER_TEXT(fmt, ...) SafeSprintf(par_view.time_text, 512, fmt, __VA_ARGS__)
+bool autopilot_presentation_mode = 0;                // czy pokazywać test autopilota
+float autopilot_presentation_current_time = 0;       // czas jaki upłynął od początku testu autopilota
+float autopilot_time_step = 0.01;           // stały krok czasowy wolny od możliwości sprzętowych (zamiast fDt)
+float autopilot_test_time = 600;              // całkowity czas testu
 
 extern float TransferSending(int ID_receiver, int transfer_type, float transfer_value);
 
 enum frame_types {
-	OBJECT_STATE, ITEM_TAKING, ITEM_RENEWAL, COLLISION, TRANSFER,
-
-	AUCTION_START,
-	AUCTION_RESPONSE,
-	AUCTION_BUY,
-	AUCTION_BUY_CONFIRMED,
-	AUCTION_OVER,
-
-	AUCTION_UPDATE,
+	OBJECT_STATE, ITEM_TAKING, ITEM_RENEWAL, COLLISION, TRANSFER
 };
 
-enum transfer_types { MONEY, FUEL };
+enum transfer_types { MONEY, FUEL};
 
 struct Frame
 {
 	int iID;
 	int frame_type;
 	ObjectState state;
+	
+	int iID_receiver;      // nr ID adresata wiadomoœci (pozostali uczestnicy powinni wiadomoœæ zignorowaæ)
 
-	int iID_receiver;          // nr ID adresata wiadomoœci (pozostali uczestnicy powinni wiadomoœæ zignorowaæ)
-
-	int item_number;           // nr przedmiotu, który zosta³ wziêty lub odzyskany
+	int item_number;     // nr przedmiotu, który zosta³ wziêty lub odzyskany
 	Vector3 vdV_collision;     // wektor prêdkoœci wyjœciowej po kolizji (uczestnik o wskazanym adresie powinien 
 	// przyj¹æ t¹ prêdkoœæ)  
 
-	int transfer_type;         // gotówka, paliwo
-	float transfer_value;      // iloœæ gotówki lub paliwa 
-	float proposed_fueld_amount;
+	int transfer_type;        // gotówka, paliwo
+	float transfer_value;  // iloœæ gotówki lub paliwa 
 	int team_number;
 
 	long existing_time;        // czas jaki uplyn¹³ od uruchomienia programu
-
-	long remaining_auction_time = 0;
 };
 
-// Funkcja wysylajaca ramke z przekazem, zwraca zrealizowan¹ wartoœæ przekazu
-float TransferSending(int ID_receiver, int transfer_type, float transfer_value)
-{
-	Frame frame;
-	frame.frame_type = TRANSFER;
-	frame.iID_receiver = ID_receiver;
-	frame.transfer_type = transfer_type;
-	frame.transfer_value = transfer_value;
-	frame.iID = my_vehicle->iID;
-
-	// tutaj nale¿a³oby uzyskaæ potwierdzenie przekazu zanim sumy zostan¹ odjête
-	if (transfer_type == MONEY)
-	{
-		if (my_vehicle->state.money < transfer_value)
-			frame.transfer_value = my_vehicle->state.money;
-		my_vehicle->state.money -= frame.transfer_value;
-		sprintf(par_view.inscription2, "Przelew_sumy_ %f _na_rzecz_ID_ %d", transfer_value, ID_receiver);
-	}
-	else if (transfer_type == FUEL)
-	{
-		if (my_vehicle->state.amount_of_fuel < transfer_value)
-			frame.transfer_value = my_vehicle->state.amount_of_fuel;
-		my_vehicle->state.amount_of_fuel -= frame.transfer_value;
-		sprintf(par_view.inscription2, "Przekazanie_paliwa_w_ilosci_%f_na_rzecz_ID_%d", transfer_value, ID_receiver);
-	}
-
-	if (frame.transfer_value > 0)
-		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
-
-	return frame.transfer_value;
-}
-
-float AcceptOfferAndGiveFuel(int auctioneer_id, float fuel_amount_proposed)
-{
-	Frame frame;
-	frame.frame_type = AUCTION_RESPONSE;
-	frame.iID_receiver = active_auction.player_whos_buying;
-	frame.transfer_type = FUEL;
-	frame.transfer_value = active_auction.money_amount;
-	frame.proposed_fueld_amount = fuel_amount_proposed;
-	frame.iID = my_vehicle->iID;
-	if (my_vehicle->state.amount_of_fuel < fuel_amount_proposed)
-	{
-		SET_INFO_TEXT("Nie masz wystarczajacej ilosci paliwa, by zaakceptowac ta oferte. Przekazujesz_%f_jednostek paliwa", my_vehicle->state.amount_of_fuel);
-		frame.transfer_value = my_vehicle->state.amount_of_fuel;
-		frame.proposed_fueld_amount = my_vehicle->state.amount_of_fuel;
-	}
-
-	TransferSending(frame.iID_receiver, FUEL, frame.proposed_fueld_amount);
-
-	//my_vehicle->state.amount_of_fuel -= frame.proposed_fueld_amount;
-	sprintf(par_view.inscription2, "Przekazanie_paliwa_w_ilosci_%f_na_rzecz_ID_%d", frame.proposed_fueld_amount, frame.iID_receiver);
-
-	int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
-	return frame.transfer_value;
-}
-
-float SendAuctionUpdateToAll(int auction_owner_id, long time_remaining = 0)
-{
-	if (time_remaining != 0) {
-		has_active_auction = false;
-
-		AcceptOfferAndGiveFuel(my_vehicle->iID, active_auction.fuel_amount);
-		SET_AUX_TEXT("zakonczono_transakcje");
-	}
-
-	for (auto& pair : network_vehicles) {
-		int ID_receiver = pair.first;
-		if (ID_receiver != auction_owner_id) {
-			Frame frame;
-			frame.frame_type = AUCTION_UPDATE;
-			frame.iID_receiver = ID_receiver;
-			frame.transfer_value = active_auction.money_amount;
-			frame.proposed_fueld_amount = active_auction.fuel_amount;
-			frame.remaining_auction_time = active_auction.remaining_time;
-			frame.iID = auction_owner_id;
-
-			if (time_remaining != 0) {
-				frame.remaining_auction_time = time_remaining;
-			}
-
-			int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
-
-
-		}
-	}
-
-	return 0.f;
-}
-
-
-bool just_created_offer = false;
-
-float TryBuyAuction(int auctioneer_id, float transfer_value_proposed, float fuel_amount_proposed)
-{
-	Frame frame;
-	frame.frame_type = AUCTION_BUY;
-	frame.iID_receiver = active_auction.player_whos_selling;
-	frame.transfer_type = MONEY;
-	frame.transfer_value = transfer_value_proposed;
-	frame.proposed_fueld_amount = fuel_amount_proposed;
-	frame.iID = my_vehicle->iID;
-
-	SET_AUCTION_TEXT("Wyslano_Graczowi_%d_oferte_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
-
-
-
-	int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
-	return frame.transfer_value;
-}
-
-float AdvertiseOffer(int my_id, float transfer_value_proposed, float fueld_proposed)
-{
-	for (auto& pair : network_vehicles) {
-		int ID_receiver = pair.first;
-		if (ID_receiver != my_id) {
-			Frame frame;
-			frame.frame_type = AUCTION_START;
-			frame.iID_receiver = ID_receiver;
-			frame.transfer_type = MONEY;
-			frame.transfer_value = transfer_value_proposed;
-			frame.proposed_fueld_amount = fueld_proposed;
-			frame.iID = my_vehicle->iID;
-
-			frame.remaining_auction_time = Auction::INITIAL_AUCTION_TIMEOUT;
-			active_auction.start_time = clock();
-			active_auction.end_time = clock() + Auction::INITIAL_AUCTION_TIMEOUT;
-			active_auction.remaining_time = Auction::INITIAL_AUCTION_TIMEOUT;
-
-			active_auction.fuel_amount = frame.proposed_fueld_amount;
-			active_auction.money_amount = frame.transfer_value;
-			active_auction.player_whos_selling = frame.iID;
-			active_auction.player_whos_buying = -1;
-
-			just_created_offer = true;
-
-			int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
-
-			return frame.transfer_value;
-		}
-	}
-	SET_INFO_TEXT("Stworzono propozycje transakcji: %f", transfer_value_proposed);
-}
 
 //******************************************
 // Funkcja obs³ugi w¹tku odbioru komunikatów 
-DWORD WINAPI ReceiveThreadFunction(void* ptr)
+DWORD WINAPI ReceiveThreadFunction(void *ptr)
 {
-	multicast_net* pmt_net = (multicast_net*)ptr;  // wskaŸnik do obiektu klasy multicast_net
+	multicast_net *pmt_net = (multicast_net*)ptr;  // wskaŸnik do obiektu klasy multicast_net
 	int size;                                 // liczba bajtów ramki otrzymanej z sieci
 	Frame frame;
 	ObjectState state;
-
+	
 	while (1)
 	{
 		size = pmt_net->reciv((char*)&frame, sizeof(Frame));   // oczekiwanie na nadejœcie ramki 
@@ -295,12 +114,12 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 		{
 			state = frame.state;
 			//fprintf(f,"odebrano state iID = %d, ID dla mojego obiektu = %d\n",state.iID,my_vehicle->iID);
-			if ((frame.iID != my_vehicle->iID))          // jeœli to nie mój w³asny Object
+			if ((frame.iID != my_vehicle->iID)&&(frame.iID > 99))          // jeœli to nie mój w³asny Object
 			{
 
 				if ((network_vehicles.size() == 0) || (network_vehicles[frame.iID] == NULL))         // nie ma jeszcze takiego obiektu w tablicy -> trzeba go stworzyæ
 				{
-					MovableObject* ob = new MovableObject(&terrain);
+					MovableObject *ob = new MovableObject(&terrain);
 					ob->iID = frame.iID;
 					network_vehicles[frame.iID] = ob;
 					if (frame.existing_time > group_existing_time) group_existing_time = frame.existing_time;
@@ -325,6 +144,7 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 					network_vehicles[frame.iID]->ChangeState(state);   // aktualizacja stanu obiektu obcego 	
 					terrain.InsertObjectIntoSectors(network_vehicles[frame.iID]);
 				}
+				
 			}
 			break;
 		}
@@ -333,15 +153,15 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 			state = frame.state;
 			if ((frame.item_number < terrain.number_of_items) && (frame.iID != my_vehicle->iID))
 			{
-				terrain.p[frame.item_number].to_take = 0;
-				terrain.p[frame.item_number].if_taken_by_me = 0;
+				terrain.p[frame.item_number].to_take = false;
+				terrain.p[frame.item_number].if_taken_by_me = false;
 			}
 			break;
 		}
 		case ITEM_RENEWAL:       // frame informujaca, ¿e przedmiot wczeœniej wziêty pojawi³ siê znowu w tym samym miejscu
 		{
 			if (frame.item_number < terrain.number_of_items)
-				terrain.p[frame.item_number].to_take = 1;
+				terrain.p[frame.item_number].to_take = true;
 			break;
 		}
 		case COLLISION:                       // frame informuj¹ca o tym, ¿e Object uleg³ kolizji
@@ -366,78 +186,7 @@ DWORD WINAPI ReceiveThreadFunction(void* ptr)
 			}
 			break;
 		}
-
-		case AUCTION_UPDATE:
-		{
-			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
-			{
-				active_auction.remaining_time = frame.remaining_auction_time;
-				active_auction.money_amount = frame.transfer_value;
-				active_auction.player_whos_selling = frame.iID;
-				active_auction.player_whos_buying = -1;
-
-				if (frame.remaining_auction_time < 0) {
-
-					has_active_auction = false;
-				}
-			}
-		}
-
-		case AUCTION_START:                       // frame informuj¹ca o przelewie pieniê¿nym lub przekazaniu towaru    
-		{
-			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
-			{
-				SET_AUCTION_TEXT("Gracz_%d_proponuje_transakcję:_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
-
-				active_auction.remaining_time = frame.remaining_auction_time;
-				active_auction.fuel_amount = frame.proposed_fueld_amount;
-				active_auction.money_amount = frame.transfer_value;
-				active_auction.player_whos_selling = frame.iID;
-				active_auction.player_whos_buying = -1;
-
-				has_active_auction = true;
-			}
-			break;
-		}
-
-		case AUCTION_BUY:                       // frame informuj¹ca o przelewie pieniê¿nym lub przekazaniu towaru    
-		{
-			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
-			{
-				SET_AUCTION_TEXT("Otrzymano_od_gracza_%d_oferte_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
-
-				if (active_auction.money_amount < frame.transfer_value) {
-					// send AUCTION_UPDATE
-					active_auction.remaining_time += Auction::AUCTION_NEW_OFFER_TIME_RENEWAL;
-					active_auction.end_time += Auction::AUCTION_NEW_OFFER_TIME_RENEWAL;
-
-
-					has_an_auction_to_confirm = true;
-					active_auction.fuel_amount = frame.proposed_fueld_amount;
-					active_auction.money_amount = frame.transfer_value;
-					active_auction.player_whos_buying = frame.iID;
-					active_auction.player_whos_selling = my_vehicle->iID;
-					has_active_auction = true;
-
-					SendAuctionUpdateToAll(my_vehicle->iID);
-				}
-			}
-			break;
-		}
-
-		case AUCTION_RESPONSE:                       // frame informuj¹ca o przelewie pieniê¿nym lub przekazaniu towaru    
-		{
-			if (frame.iID_receiver == my_vehicle->iID)  // ID pojazdu, ktory otrzymal przelew zgadza siê z moim ID 
-			{
-				SET_AUCTION_TEXT("Gracz_%d_przyjal_transakcje:_%f_za_%f_paliwa.", frame.iID, frame.transfer_value, frame.proposed_fueld_amount);
-
-				has_active_auction = false;
-
-				TransferSending(frame.iID, MONEY, frame.transfer_value);
-			}
-			break;
-		}
-
+		
 		} // switch po typach ramek
 		// Opuszczenie ścieżki krytycznej / Release the Critical section
 		LeaveCriticalSection(&m_cs);               // wyjście ze ścieżki krytycznej
@@ -454,23 +203,25 @@ void InteractionInitialisation()
 
 	my_vehicle = new MovableObject(&terrain);    // tworzenie wlasnego obiektu
 	if (if_different_skills == false)
-		my_vehicle->state.money_collection_skills = my_vehicle->state.fuel_collection_skills = 1.0;
+		my_vehicle->planting_skills = my_vehicle->money_collection_skills = my_vehicle->fuel_collection_skills = 1.0;
+
+	ap = new AutoPilot();
 
 	VW_cycle_time = clock();             // pomiar aktualnego czasu
 
 	// obiekty sieciowe typu multicast (z podaniem adresu WZR oraz numeru portu)
-	multi_reciv = new multicast_net("224.10.120.125", 10001);      // Object do odbioru ramek sieciowych
-	multi_send = new multicast_net("224.10.120.125", 10001);       // Object do wysy³ania ramek
+	multi_reciv = new multicast_net("224.10.12.112", 10001);      // Object do odbioru ramek sieciowych
+	multi_send = new multicast_net("224.10.12.112", 10001);       // Object do wysy³ania ramek
 
 	// uruchomienie watku obslugujacego odbior komunikatow
 	threadReciv = CreateThread(
 		NULL,                        // no security attributes
 		0,                           // use default stack size
 		ReceiveThreadFunction,       // thread function
-		(void*)multi_reciv,         // argument to thread function
+		(void *)multi_reciv,         // argument to thread function
 		0,                           // use default creation flags
 		&dwThreadId);                // returns the thread identifier
-
+		
 }
 
 
@@ -492,17 +243,30 @@ void VirtualWorldCycle()
 
 		sprintf(par_view.inscription1, " %0.0f_fps, fuel = %0.2f, money = %d,", fFps, my_vehicle->state.amount_of_fuel, my_vehicle->state.money);
 		if (counter_of_simulations % 500 == 0) sprintf(par_view.inscription2, "");
-		
-		if (just_created_offer) {
-			active_auction.remaining_time = Auction::INITIAL_AUCTION_TIMEOUT;
-			just_created_offer = false;
-		}
-		active_auction.remaining_time -= (long)(VW_cycle_time - prev_time);
 	}
 
-	terrain.DeleteObjectsFromSectors(my_vehicle);
-	my_vehicle->Simulation(fDt);                    // symulacja w³asnego obiektu
-	terrain.InsertObjectIntoSectors(my_vehicle);
+	if (autopilot_presentation_mode)
+	{
+		ap->AutoControl(my_vehicle);
+		terrain.DeleteObjectsFromSectors(my_vehicle);
+		my_vehicle->Simulation(autopilot_time_step);
+		terrain.InsertObjectIntoSectors(my_vehicle);
+		autopilot_presentation_current_time += autopilot_time_step;
+		sprintf(par_view.inscription2, "POKAZ TESTU AGENTA: CZAS = %f", autopilot_presentation_current_time);
+		if (autopilot_presentation_current_time >= autopilot_test_time)
+		{
+			autopilot_presentation_mode = false;
+			MessageBox(main_window, "Koniec pokazu testu agenta", "Czy chcesz zamknac program?", MB_OK);
+			SendMessage(main_window, WM_DESTROY, 0, 0);
+		}
+
+	}
+	else
+	{
+		terrain.DeleteObjectsFromSectors(my_vehicle);
+		my_vehicle->Simulation(fDt);                    // symulacja w³asnego obiektu
+		terrain.InsertObjectIntoSectors(my_vehicle);
+	}
 
 
 	if ((my_vehicle->iID_collider > -1) &&             // wykryto kolizjê - wysy³am specjaln¹ ramkê, by poinformowaæ o tym drugiego uczestnika
@@ -516,7 +280,7 @@ void VirtualWorldCycle()
 		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
 
 		char text[128];
-		sprintf(par_view.inscription2, "Kolizja_z_obiektem_o_ID = %d", my_vehicle->iID_collider);
+		sprintf(par_view.inscription2, "Zderzenie_z_obiektem_o_ID = %d", my_vehicle->iID_collider);
 		//SetWindowText(main_window,text);
 
 		my_vehicle->iID_collider = -1;
@@ -543,7 +307,7 @@ void VirtualWorldCycle()
 		frame.iID = my_vehicle->iID;
 		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
 
-		sprintf(par_view.inscription2, "Wziecie_przedmiotu_o_wartosci_ %f", my_vehicle->taking_value);
+		sprintf(par_view.inscription2, "Wziecie_rzeczy_o_wartosci_ %f", my_vehicle->taking_value);
 
 		my_vehicle->number_of_taking_item = -1;
 		my_vehicle->taking_value = 0;
@@ -558,61 +322,23 @@ void VirtualWorldCycle()
 		frame.iID = my_vehicle->iID;
 		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
 
+
 		my_vehicle->number_of_renewed_item = -1;
 	}
 
-	//if (active_auction)
-	if (has_active_auction) {
-		SET_TIMER_TEXT("Licytacja:_czas_pozostal:___%ld_____", active_auction.remaining_time);
-		if (active_auction.player_whos_selling == my_vehicle->iID) {
-			if (active_auction.remaining_time < 0) {
-				SendAuctionUpdateToAll(my_vehicle->iID, -10000);
-			}
-		}
-	}
-	else {
-		SET_TIMER_TEXT("brak licytacji");
-	}
 
-	if (try_to_advertise_offer) {
-		AdvertiseOffer(my_vehicle->iID, my_vehicle->proposed_money_amount, my_vehicle->proposed_fuel_amount);
-		try_to_advertise_offer = false;
+
+	// --------------------------------------------------------------------
+	// --------------- WYWOŁANIE ALGORYTMU STEROWANIA ---------------------
+	// (dobór si³y F w granicach (-F_max/2, F_max), k¹ta skrêtu kó³ wheel_turn_angle (-alpha_max, alpha_max) oraz
+	// si³y o hamowania breaking_degree (0,1) [+ decyzji w zwi¹zku ze wspó³prac¹] w zale¿noœci od sytuacji)
+	if (if_autonomous_control)
+	{
+		ap->AutoControl(my_vehicle);
+		sprintf(par_view.inscription2, "F=%f,_ham=%f,_alfa=%f", my_vehicle->F, my_vehicle->breaking_degree, my_vehicle->state.wheel_turn_angle);
 	}
 
-	if (has_active_auction) {
-		SET_AUCTION_TEXT("Gracz_%d_oferuje_%f_paliwa_za_%f", active_auction.player_whos_buying, active_auction.fuel_amount, active_auction.money_amount);
 
-
-		SET_AUX_TEXT("Twoja_oferta:_%f_za_%f.", my_vehicle->proposed_money_amount, active_auction.fuel_amount);
-	}
-
-	if (responded_to_auction) {
-		responded_to_auction = false;
-		if (try_buy_auction) {
-			TryBuyAuction(my_vehicle->iID, my_vehicle->proposed_money_amount, active_auction.fuel_amount);
-		}
-		else {
-			SET_AUCTION_TEXT("Odrzucono ofertę gracza %d.", my_vehicle->iID);
-		}
-
-		try_buy_auction = false;
-		try_reject_auction = false;
-	}
-
-	//if (auction_offer_responded) {
-	//	if (auction_offer_accepted) {
-	//		AcceptOfferAndGiveFuel(my_vehicle->iID, active_auction.fuel_amount);
-	//		SET_AUX_TEXT("zakonczono_transakcje");
-	//	}
-	//	else {
-	//		SET_AUCTION_TEXT("Odrzucono ofertę gracza %d.", my_vehicle->iID);
-	//	}
-	//	auction_offer_accepted = false;
-	//}
-
-	/*if (has_an_auction_to_confirm) {
-		SET_AUX_TEXT("gracz_%d_czeka_na_odpowiedz", active_auction.player_whos_buying);
-	}*/
 }
 
 // *****************************************************************
@@ -620,10 +346,44 @@ void VirtualWorldCycle()
 // ****    poza grafik¹ 
 void EndOfInteraction()
 {
-	TerminateThread(threadReciv, 1);
 	fprintf(f, "Koniec interakcji\n");
 	fclose(f);
 }
+
+// Funkcja wysylajaca ramke z przekazem, zwraca zrealizowan¹ wartoœæ przekazu
+float TransferSending(int ID_receiver, int transfer_type, float transfer_value)
+{
+	Frame frame;
+	frame.frame_type = TRANSFER;
+	frame.iID_receiver = ID_receiver;
+	frame.transfer_type = transfer_type;
+	frame.transfer_value = transfer_value;
+	frame.iID = my_vehicle->iID;
+
+	// tutaj nale¿a³oby uzyskaæ potwierdzenie przekazu zanim sumy zostan¹ odjête
+	if (transfer_type == MONEY)
+	{
+		if (my_vehicle->state.money < transfer_value)
+			frame.transfer_value = my_vehicle->state.money;
+		my_vehicle->state.money -= frame.transfer_value;
+		sprintf(par_view.inscription2, "Przelew_gotowki_ %f _na_rzecz_ID_ %d", transfer_value, ID_receiver);
+	}
+	else if (transfer_type == FUEL)
+	{
+		if (my_vehicle->state.amount_of_fuel < transfer_value)
+			frame.transfer_value = my_vehicle->state.amount_of_fuel;
+		my_vehicle->state.amount_of_fuel -= frame.transfer_value;
+		sprintf(par_view.inscription2, "Przekazanie_paliwa_w_ilosci_ %f _na_rzecz_ID_ %d", transfer_value, ID_receiver);
+	}
+
+	if (frame.transfer_value > 0)
+		int iRozmiar = multi_send->send((char*)&frame, sizeof(Frame));
+
+	return frame.transfer_value;
+}
+
+
+
 
 
 //deklaracja funkcji obslugi okna
@@ -670,16 +430,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	main_window będzie miało zmienne rozmiary, listwę z tytułem, menu systemowym
 	i przyciskami do zwijania do ikony i rozwijania na cały ekran, po utworzeniu
 	będzie widoczne na ekranie */
-	main_window = CreateWindow(class_name, "WZR 2025/26, temat 4, wersja e", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-		10, 10, 1400, 820, NULL, NULL, hInstance, NULL);
+	main_window = CreateWindow(class_name, "WZR 2025/26, temat 6, wersja h [Y-autopilot, F11-autop.test]", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+		20, 20, 850, 670, NULL, NULL, hInstance, NULL);
 
-
-	SET_INSCRIPTION1("inscription1");
-	SET_INSCRIPTION2("inscription2");
-	SET_OFFER_TEXT("offer_text");
-	SET_AUCTION_TEXT("auction_text");
-	SET_INFO_TEXT("info_text");
-	SET_AUX_TEXT("aux_text");
 
 	ShowWindow(main_window, nCmdShow);
 
@@ -752,11 +505,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 		else                                          // zaznaczenie obiektów
 		{
 			RECT r;
-			//GetWindowRect(main_window,&r);
 			GetClientRect(main_window, &r);
-			//Vector3 w = Cursor3dCoordinates(x, r.bottom - r.top - y);
-			Vector3 w = terrain.Cursor3D_CoordinatesWithoutParallax(x, r.bottom - r.top - y);
-
 
 			//float radius = (w - point_click).length();
 			float min_dist = 1e10;
@@ -766,11 +515,11 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			{
 				if (it->second)
 				{
-					MovableObject* ob = it->second;
+					MovableObject *ob = it->second;
 					float xx, yy, zz;
 					ScreenCoordinates(&xx, &yy, &zz, ob->state.vPos);
 					yy = r.bottom - r.top - yy;
-					float odl_kw = (xx - x) * (xx - x) + (yy - y) * (yy - y);
+					float odl_kw = (xx - x)*(xx - x) + (yy - y)*(yy - y);
 					if (min_dist > odl_kw)
 					{
 						min_dist = odl_kw;
@@ -778,14 +527,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 						if_movable_obj = 1;
 					}
 				}
-			}
-
-
-			// trzeba to przerobić na wersję sektorową, gdyż przedmiotów może być dużo!
-			// niestety nie jest to proste. 
-
-			//Item **wsk_prz = NULL;
-			//long liczba_prz_w_prom = terrain.ItemsInRadius(&wsk_prz, w,100);
+			}	
 
 			for (long i = 0; i < terrain.number_of_items; i++)
 			{
@@ -799,7 +541,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 					placement = terrain.p[i].vPos;
 				ScreenCoordinates(&xx, &yy, &zz, placement);
 				yy = r.bottom - r.top - yy;
-				float odl_kw = (xx - x) * (xx - x) + (yy - y) * (yy - y);
+				float odl_kw = (xx - x)*(xx - x) + (yy - y)*(yy - y);
 				if (min_dist > odl_kw)
 				{
 					min_dist = odl_kw;
@@ -810,8 +552,6 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 			if (index_min > -1)
 			{
-				//fprintf(f,"zaznaczono przedmiot %d pol = (%f, %f, %f)\n",ind_min,terrain.p[ind_min].vPos.x,terrain.p[ind_min].vPos.y,terrain.p[ind_min].vPos.z);
-				//terrain.p[ind_min].if_selected = 1 - terrain.p[ind_min].if_selected;
 				if (if_movable_obj)
 				{
 					network_vehicles[index_min]->if_selected = 1 - network_vehicles[index_min]->if_selected;
@@ -821,21 +561,35 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 				}
 				else
 				{
-					terrain.SelectUnselectItemOrGroup(index_min);
+					if (CTRL_pressed) // zaznaczanie/odznaczanie wszystkich przedmiotów tego samego typu
+					{
+						int type = terrain.p[index_min].type;
+						for (long j = 0; j < terrain.number_of_items; j++)
+							if (terrain.p[j].type == type)
+								terrain.SelectUnselectItemOrGroup(j);
+					}
+					else
+						terrain.SelectUnselectItemOrGroup(index_min);
 				}
-				//char lan[256];
-				//sprintf(lan, "klikniêto w przedmiot %d pol = (%f, %f, %f)\n",ind_min,terrain.p[ind_min].vPos.x,terrain.p[ind_min].vPos.y,terrain.p[ind_min].vPos.z);
-				//SetWindowText(main_window,lan);
 			}
-			Vector3 point_click = Cursor3dCoordinates(x, r.bottom - r.top - y);
 
 		}
 
 		break;
 	}
 	case WM_MBUTTONDOWN: //reakcja na œrodkowy przycisk myszki : uaktywnienie/dezaktywacja sterwania myszkowego
-	{
-		mouse_control = 1 - mouse_control;
+	{                    // lub w widoku z góry przesuwanie mapy (Ctrl+Home - powrót do poł. bazowego)
+		if (par_view.top_view)
+		{
+			map_shift_mode = true;
+			par_view.tempor_shift_to_bottom = par_view.shift_to_bottom;
+			par_view.tempor_shift_to_right = par_view.shift_to_right;
+			
+		}
+		else
+		{
+			mouse_control = 1 - mouse_control;			
+		}
 		cursor_x = LOWORD(lParam);
 		cursor_y = HIWORD(lParam);
 		break;
@@ -852,24 +606,38 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			my_vehicle->F = 0.0;        // si³a pchaj¹ca do przodu
 		break;
 	}
+	case WM_MBUTTONUP: //reakcja na œrodkowy przycisk myszki : uaktywnienie/dezaktywacja sterwania myszkowego
+	{                    // lub w widoku z góry przesuwanie mapy (Ctrl+Home - powrót do poł. bazowego)
+		map_shift_mode = false;
+		//par_view.tracking = par_view.tempor_tracking;
+		break;
+	}
 	case WM_MOUSEMOVE:
 	{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		if (mouse_control)
+		if (map_shift_mode)
+		{
+			RECT r;
+			GetClientRect(main_window, &r);
+			Vector3 v1 = terrain.Cursor3D_CoordinatesWithoutParallax(cursor_x, r.bottom - r.top - cursor_y);
+			Vector3 v2 = terrain.Cursor3D_CoordinatesWithoutParallax(x, r.bottom - r.top - y);
+			par_view.shift_to_bottom = par_view.tempor_shift_to_bottom + v2.z - v1.z;
+			par_view.shift_to_right = par_view.tempor_shift_to_right + v2.x - v1.x;
+		}
+		else if (mouse_control)
 		{
 			float wheel_turn_angle = (float)(cursor_x - x) / 20;
 			if (wheel_turn_angle > 45) wheel_turn_angle = 45;
 			if (wheel_turn_angle < -45) wheel_turn_angle = -45;
-			my_vehicle->state.wheel_turn_angle = PI * wheel_turn_angle / 180;
+			my_vehicle->state.wheel_turn_angle = PI*wheel_turn_angle / 180;
 		}
 		break;
 	}
 	case WM_MOUSEWHEEL:     // ruch kó³kiem myszy -> przybli¿anie, oddalanie widoku
 	{
 		int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);  // dodatni do przodu, ujemny do ty³u
-		//fprintf(f,"zDelta = %d\n",zDelta);          // zwykle +-120, jak siê bardzo szybko zakrêci to czasmi wyjdzie +-240
-		if (zDelta > 0) {
+		if (zDelta > 0){
 			if (par_view.distance > 0.5) par_view.distance /= 1.2;
 			else par_view.distance = 0;
 		}
@@ -880,6 +648,8 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 		break;
 	}
+
+
 	case WM_KEYDOWN:
 	{
 
@@ -911,7 +681,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			if (CTRL_pressed && par_view.top_view)
 				par_view.shift_to_bottom += par_view.distance / 2;       // przesunięcie widoku z kamery w górę
 			else
-				my_vehicle->F = my_vehicle->F_max;        // si³a pchaj¹ca do przodu
+				my_vehicle->F = my_vehicle->F_max;             // si³a pchaj¹ca do przodu
 			break;
 		}
 		case VK_DOWN:
@@ -928,13 +698,13 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 				par_view.shift_to_right += par_view.distance / 2;
 			else
 			{
-				if (my_vehicle->steer_wheel_speed < 0) {
-					my_vehicle->steer_wheel_speed = 0;
+				if (my_vehicle->wheel_turn_speed < 0) {
+					my_vehicle->wheel_turn_speed = 0;
 					my_vehicle->if_keep_steer_wheel = true;
 				}
 				else {
-					if (SHIFT_pressed) my_vehicle->steer_wheel_speed = 0.5;
-					else my_vehicle->steer_wheel_speed = 0.5 / 4;
+					if (SHIFT_pressed) my_vehicle->wheel_turn_speed = 0.5;
+					else my_vehicle->wheel_turn_speed = 0.5 / 4;
 				}
 			}
 
@@ -946,13 +716,13 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 				par_view.shift_to_right -= par_view.distance / 2;
 			else
 			{
-				if (my_vehicle->steer_wheel_speed > 0) {
-					my_vehicle->steer_wheel_speed = 0;
+				if (my_vehicle->wheel_turn_speed > 0) {
+					my_vehicle->wheel_turn_speed = 0;
 					my_vehicle->if_keep_steer_wheel = true;
 				}
 				else {
-					if (SHIFT_pressed) my_vehicle->steer_wheel_speed = -0.5;
-					else my_vehicle->steer_wheel_speed = -0.5 / 4;
+					if (SHIFT_pressed) my_vehicle->wheel_turn_speed = -0.5;
+					else my_vehicle->wheel_turn_speed = -0.5 / 4;
 				}
 			}
 			break;
@@ -964,84 +734,14 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 
 			break;
 		}
-
-		case 'N':   // przybli¿enie widoku
+		case '/':
 		{
-			chosen_player = (chosen_player - 1) % (network_vehicles.size() + 1);
-			SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
+			fprintf(f,"state.vPos = Vector3(%f,%f,%f);\n", my_vehicle->state.vPos.x, my_vehicle->state.vPos.y, 
+				my_vehicle->state.vPos.z);
+			fprintf(f,"state.qOrient = quaternion(-0.045170, 0.813078, 0.014832, -0.580197);\n",
+				my_vehicle->state.qOrient.w, my_vehicle->state.qOrient.x, my_vehicle->state.qOrient.y, my_vehicle->state.qOrient.z);
 			break;
 		}
-
-		case 'M':   // przybli¿enie widoku
-		{
-			chosen_player = (chosen_player + 1) % (network_vehicles.size() + 1);
-			SET_AUX_TEXT("Chosen player ID: %d", chosen_player);
-			break;
-		}
-
-		case 'K':   // przybli¿enie widoku
-		{
-			my_vehicle->proposed_fuel_amount = max(my_vehicle->proposed_fuel_amount - 1, 0);
-			SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
-			break;
-		}
-
-		case 'L':   // przybli¿enie widoku
-		{
-			my_vehicle->proposed_fuel_amount = min(my_vehicle->proposed_fuel_amount + 1, my_vehicle->state.amount_of_fuel);
-			SET_INFO_TEXT("Proponowana ilosc paliwa do przekazania: %f", my_vehicle->proposed_fuel_amount);
-			break;
-		}
-
-		case 'O':   // przybli¿enie widoku
-		{
-			my_vehicle->proposed_money_amount = max(my_vehicle->proposed_money_amount - 10, 0);
-			SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
-			break;
-		}
-
-		case 'P':   // przybli¿enie widoku
-		{
-			my_vehicle->proposed_money_amount = min(my_vehicle->proposed_money_amount + 10, my_vehicle->state.money);
-			SET_AUCTION_TEXT("Proponowana ilosc pieniedzy do przekazania: %f", my_vehicle->proposed_money_amount);
-			break;
-		}
-
-		case 'T':   // przybli¿enie widoku
-		{
-			try_to_advertise_offer = true;
-			break;
-		}
-
-		case 'Y':   // przybli¿enie widoku
-		{
-			if (has_active_auction && active_auction.player_whos_selling != my_vehicle->iID) {
-
-				try_buy_auction = true;
-				responded_to_auction = true;
-			}
-			/*if (has_an_auction_to_confirm && active_auction.player_whos_buying != my_vehicle->iID) {
-				auction_offer_accepted = true;
-				auction_offer_responded = true;
-				has_an_auction_to_confirm = false;
-			}*/
-			break;
-		}
-
-		case 'U':   // przybli¿enie widoku
-		{
-			if (has_active_auction && active_auction.player_whos_selling != my_vehicle->iID) {
-				try_reject_auction = true;
-				responded_to_auction = true;
-			}
-			if (has_an_auction_to_confirm && active_auction.player_whos_buying != my_vehicle->iID) {
-				auction_offer_accepted = false;
-				auction_offer_responded = true;
-				has_an_auction_to_confirm = false;
-			}
-			break;
-		}
-
 		case 'W':   // przybli¿enie widoku
 		{
 			//initial_camera_position = initial_camera_position - initial_camera_direction*0.3;
@@ -1049,9 +749,8 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			else par_view.distance = 0;
 			break;
 		}
-		case 'S':   // distance widoku
+		case 'S':   // odległość widoku
 		{
-			//initial_camera_position = initial_camera_position + initial_camera_direction*0.3; 
 			if (par_view.distance > 0) par_view.distance *= 1.2;
 			else par_view.distance = 0.5;
 			break;
@@ -1103,7 +802,7 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			{
 				if (it->second)
 				{
-					MovableObject* ob = it->second;
+					MovableObject *ob = it->second;
 					if (ob->if_selected)
 						float ilosc_p = TransferSending(ob->iID, FUEL, 10);
 				}
@@ -1116,16 +815,85 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			{
 				if (it->second)
 				{
-					MovableObject* ob = it->second;
+					MovableObject *ob = it->second;
 					if (ob->if_selected)
 						float ilosc_p = TransferSending(ob->iID, MONEY, 100);
 				}
 			}
 			break;
 		}
+		case 'Y':
+			if (if_autonomous_control) if_autonomous_control = false;
+			else if_autonomous_control = true;
+
+			if (if_autonomous_control)
+				sprintf(par_view.inscription1, "Wlaczenie_autosterowania,_teraz_pojazd_staje_sie_samochodem");
+			else
+			{
+				my_vehicle->state.wheel_turn_angle = my_vehicle->F = my_vehicle->breaking_degree = 0;
+				sprintf(par_view.inscription1, "Wylaczenie_autosterowania");
+			}
+			break;
+		case 'L':     // rozpoczęcie zaznaczania metodą lasso
+			L_pressed = true;
+			break;
+		case VK_F11:  // sumulacja automatycznego sterowania obiektem w celu jego oceny poza czasem rzeczywistym 
+		{
+			bool if_parameters_optimal = true;    // pe³ne umiejêtnoœci, sta³y czas kroku
+			Terrain t2;
+			MovableObject *Object = new MovableObject(&t2);
+			//AutoPilot *a = new AutoPilot(&t2,Object);
+			float time_step = -1;
+			if (if_parameters_optimal)
+			{
+				Object->planting_skills = Object->money_collection_skills = Object->fuel_collection_skills = 1.0;
+				time_step = autopilot_time_step;
+			}
+			else
+			{
+				Object->planting_skills = my_vehicle->planting_skills;
+				Object->money_collection_skills = my_vehicle->money_collection_skills;
+				Object->fuel_collection_skills = my_vehicle->fuel_collection_skills;
+				time_step = fDt;
+			}
+			long money_at_start = Object->state.money;
+
+			char lanc[256];
+			sprintf(lanc, "Test sterowania autonomicznego dla um.got = %1.1f, um.pal = %1.1f, krok = %f[s], - prosze czekac!", Object->money_collection_skills, Object->fuel_collection_skills, time_step);
+			SetWindowText(main_window, lanc);
+			long t_start = clock();
+
+
+			ap->ControlTest(Object, time_step, autopilot_test_time);
+
+
+			char lan[512], lan1[512];
+			sprintf(lan, "Uzyskano %d gotowki w ciagu %f sekund (krok = %f), ilosc paliwa = %f, czy pokazac caly test?", Object->state.money - money_at_start, autopilot_test_time, time_step, Object->state.amount_of_fuel);
+			sprintf(lan1, "Test autonomicznego sterowania, czas testu = %f s.", (float)(clock() - t_start) / CLOCKS_PER_SEC);
+			int result = MessageBox(main_window, lan, lan1, MB_YESNO);
+			if (result == 6)
+			{
+				autopilot_presentation_mode = true;
+				autopilot_presentation_current_time = 0;
+				my_vehicle->planting_skills = my_vehicle->money_collection_skills = my_vehicle->fuel_collection_skills = 1.0;
+			}
+
+
+			break;
+		}
+		case VK_F3:
+		{
+			long number_of_epochs = 1000;
+			char lanc[512];
+			sprintf(lanc, "Symulowane wyzarzanie parametrow autopilota %d epok - prosze czekac!", number_of_epochs);
+			SetWindowText(main_window, lanc);
+			ap->ParametersSimAnnealing(number_of_epochs, autopilot_time_step, autopilot_test_time);
+			break;
+		}
+
+		} // switch po klawiszach
 
 		break;
-		}
 	}
 
 	case WM_KEYUP:
@@ -1147,6 +915,9 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 			ALT_pressed = 0;
 			break;
 		}
+		case 'L':     // zakonczenie zaznaczania metodą lasso
+			L_pressed = false;
+			break;
 		case VK_SPACE:
 		{
 			my_vehicle->breaking_degree = 0.0;
@@ -1165,147 +936,142 @@ void MessagesHandling(UINT message_type, WPARAM wParam, LPARAM lParam)
 		}
 		case VK_LEFT:
 		{
-			if (my_vehicle->if_keep_steer_wheel) my_vehicle->steer_wheel_speed = -0.5 / 4;
-			else my_vehicle->steer_wheel_speed = 0;
+			if (my_vehicle->if_keep_steer_wheel) my_vehicle->wheel_turn_speed = -0.5 / 4;
+			else my_vehicle->wheel_turn_speed = 0;
 			my_vehicle->if_keep_steer_wheel = false;
 			break;
 		}
 		case VK_RIGHT:
 		{
-			if (my_vehicle->if_keep_steer_wheel) my_vehicle->steer_wheel_speed = 0.5 / 4;
-			else my_vehicle->steer_wheel_speed = 0;
+			if (my_vehicle->if_keep_steer_wheel) my_vehicle->wheel_turn_speed = 0.5 / 4;
+			else my_vehicle->wheel_turn_speed = 0;
 			my_vehicle->if_keep_steer_wheel = false;
 			break;
 		}
+
 		}
+
+		break;
+	}
 
 	} // switch po komunikatach
-	}
-	}
+}
 
-	/********************************************************************
-	FUNKCJA OKNA realizujaca przetwarzanie meldunków kierowanych do okna aplikacji*/
-	LRESULT CALLBACK WndProc(HWND main_window, UINT message_type, WPARAM wParam, LPARAM lParam)
+/********************************************************************
+FUNKCJA OKNA realizujaca przetwarzanie meldunków kierowanych do okna aplikacji*/
+LRESULT CALLBACK WndProc(HWND main_window, UINT message_type, WPARAM wParam, LPARAM lParam)
+{
+
+	// PONIŻSZA INSTRUKCJA DEFINIUJE REAKCJE APLIKACJI NA POSZCZEGÓLNE MELDUNKI 
+
+	MessagesHandling(message_type, wParam, lParam);
+
+	switch (message_type)
+	{
+	case WM_CREATE:  //system_message wysyłany w momencie tworzenia okna
 	{
 
-		// PONIŻSZA INSTRUKCJA DEFINIUJE REAKCJE APLIKACJI NA POSZCZEGÓLNE MELDUNKI 
+		g_context = GetDC(main_window);
 
-		MessagesHandling(message_type, wParam, lParam);
-
-		switch (message_type)
+		srand((unsigned)time(NULL));
+		int result = GraphicsInitialization(g_context);
+		if (result == 0)
 		{
-		case WM_CREATE:  //system_message wysyłany w momencie tworzenia okna
-		{
-
-			g_context = GetDC(main_window);
-
-			srand((unsigned)time(NULL));
-			int result = GraphicsInitialization(g_context);
-			if (result == 0)
-			{
-				printf("nie udalo sie otworzyc okna graficznego\n");
-				//exit(1);
-			}
-
-			InteractionInitialisation();
-
-			SetTimer(main_window, 1, 10, NULL);
-
-			return 0;
+			printf("nie udalo sie otworzyc okna graficznego\n");
+			//exit(1);
 		}
-		case WM_KEYDOWN:
+
+		InteractionInitialisation();
+
+		SetTimer(main_window, 1, 10, NULL);
+
+		return 0;
+	}
+	case WM_KEYDOWN:
+	{
+		switch (LOWORD(wParam))
 		{
-			switch (LOWORD(wParam))
+		case VK_F1:  // wywolanie systemu pomocy
+		{
+			char lan[1024], lan_bie[1024];
+			//GetSystemDirectory(lan_sys,1024);
+			GetCurrentDirectory(1024, lan_bie);
+			strcpy(lan, "C:\\Program Files\\Internet Explorer\\iexplore ");
+			strcat(lan, lan_bie);
+			strcat(lan, "\\pomoc.htm");
+			int wyni = WinExec(lan, SW_NORMAL);
+			if (wyni < 32)  // proba uruchominia pomocy nie powiodla sie
 			{
-			case VK_F1:  // wywolanie systemu pomocy
-			{
-				char lan[1024], lan_bie[1024];
-				//GetSystemDirectory(lan_sys,1024);
-				GetCurrentDirectory(1024, lan_bie);
-				strcpy(lan, "C:\\Program Files\\Internet Explorer\\iexplore ");
+				strcpy(lan, "C:\\Program Files\\Mozilla Firefox\\firefox ");
 				strcat(lan, lan_bie);
 				strcat(lan, "\\pomoc.htm");
-				int wyni = WinExec(lan, SW_NORMAL);
-				if (wyni < 32)  // proba uruchominia pomocy nie powiodla sie
+				wyni = WinExec(lan, SW_NORMAL);
+				if (wyni < 32)
 				{
-					strcpy(lan, "C:\\Program Files\\Mozilla Firefox\\firefox ");
-					strcat(lan, lan_bie);
-					strcat(lan, "\\pomoc.htm");
-					wyni = WinExec(lan, SW_NORMAL);
-					if (wyni < 32)
-					{
-						char lan_win[1024];
-						GetWindowsDirectory(lan_win, 1024);
-						strcat(lan_win, "\\notepad pomoc.txt ");
-						wyni = WinExec(lan_win, SW_NORMAL);
-					}
+					char lan_win[1024];
+					GetWindowsDirectory(lan_win, 1024);
+					strcat(lan_win, "\\notepad pomoc.txt ");
+					wyni = WinExec(lan_win, SW_NORMAL);
 				}
-				break;
 			}
-			case VK_F4:  // włączanie/ wyłączanie trybu edycji terrainu
-			{
-				terrain_edition_mode = 1 - terrain_edition_mode;
-				if (terrain_edition_mode)
-					SetWindowText(main_window, "TRYB EDYCJI TERENU F2-SaveMapToFile, F1-pomoc");
-				else
-					SetWindowText(main_window, "WYJSCIE Z TRYBU EDYCJI TERENU");
-				break;
-			}
-			case VK_ESCAPE:   // wyjście z programu
-			{
-				SendMessage(main_window, WM_DESTROY, 0, 0);
-				break;
-			}
-			}
-			return 0;
+			break;
 		}
-
-		case WM_PAINT:
+		
+		case VK_ESCAPE:   // wyjście z programu
 		{
-			PAINTSTRUCT paint;
-			HDC context;
-			context = BeginPaint(main_window, &paint);
-
-			DrawScene();
-			SwapBuffers(context);
-
-			EndPaint(main_window, &paint);
-
-
-
-			return 0;
+			SendMessage(main_window, WM_DESTROY, 0, 0);
+			break;
 		}
-
-		case WM_TIMER:
-
-			return 0;
-
-		case WM_SIZE:
-		{
-			int cx = LOWORD(lParam);
-			int cy = HIWORD(lParam);
-
-			WindowSizeChange(cx, cy);
-
-			return 0;
 		}
-
-		case WM_DESTROY: //obowiązkowa obsługa meldunku o zamknięciu okna
-			if (lParam == 100)
-				MessageBox(main_window, "Jest zbyt późno na dołączenie do wirtualnego świata. Trzeba to zrobić zanim inni uczestnicy zmienią jego state.", "Zamknięcie programu", MB_OK);
-
-			EndOfInteraction();
-			EndOfGraphics();
-
-			ReleaseDC(main_window, g_context);
-			KillTimer(main_window, 1);
-
-			PostQuitMessage(0);
-			return 0;
-
-		default: //standardowa obsługa pozostałych meldunków
-			return DefWindowProc(main_window, message_type, wParam, lParam);
-		}
-
+		return 0;
 	}
 
+	case WM_PAINT:
+	{
+		PAINTSTRUCT paint;
+		HDC context;
+		context = BeginPaint(main_window, &paint);
+
+		DrawScene();
+		SwapBuffers(context);
+
+		EndPaint(main_window, &paint);
+
+		return 0;
+	}
+
+	case WM_TIMER:
+
+		return 0;
+
+	case WM_SIZE:
+	{
+		int cx = LOWORD(lParam);
+		int cy = HIWORD(lParam);
+
+		WindowSizeChange(cx, cy);
+
+		return 0;
+	}
+
+	case WM_DESTROY: //obowiązkowa obsługa meldunku o zamknięciu okna
+		if (lParam == 100)
+			MessageBox(main_window, "Jest zbyt późno na dołączenie do wirtualnego świata. Trzeba to zrobić zanim inni uczestnicy zmienią jego state.", "Zamknięcie programu", MB_OK);
+
+		fprintf(f, "state.vPos = Vector3(%f, %f , %f);\n", my_vehicle->state.vPos.x, my_vehicle->state.vPos.y + 10, my_vehicle->state.vPos.z);
+		fprintf(f, "state.qOrient = quaternion(%f,%f,%f,%f);\n", my_vehicle->state.qOrient.x, my_vehicle->state.qOrient.y, my_vehicle->state.qOrient.z, my_vehicle->state.qOrient.w);
+
+		EndOfInteraction();
+		EndOfGraphics();
+
+		ReleaseDC(main_window, g_context);
+		KillTimer(main_window, 1);
+
+		PostQuitMessage(0);
+		return 0;
+
+	default: //standardowa obsługa pozostałych meldunków
+		return DefWindowProc(main_window, message_type, wParam, lParam);
+	}
+
+}
