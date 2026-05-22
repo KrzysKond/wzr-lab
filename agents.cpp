@@ -9,84 +9,61 @@ AutoPilot::AutoPilot()
 
 }
 
-void AutoPilot::AutoControl(MovableObject *ob)
+void AutoPilot::AutoControl(MovableObject* ob)
 {
-	Terrain* teren = ob->terrain;  // wskaŸnik do terenu
-	Item* przedmioty = teren->p;   // wskaŸnik do  tablicy przedmiotów
+	constexpr float kLowFuel   = 5.0f;
+	constexpr float kStopDist  = 3.0f;
+	constexpr float kMinDist   = 0.001f;
 
-	Vector3 vect_local_forward = ob->state.qOrient.rotate_vector(Vector3(1, 0, 0));
-	Vector3 vect_local_right = ob->state.qOrient.rotate_vector(Vector3(0, 0, 1));
+	ob->F                      = ob->F_max;
+	ob->breaking_degree        = 0.0f;
+	ob->state.wheel_turn_angle = 0.0f;
+	ob->wheel_turn_speed       = 0.0f;
+	ob->if_keep_steer_wheel    = 0;
 
-	// parametry sterowania:
-	ob->breaking_degree = 0;             // si³a hamowania
-	ob->F = ob->F_max;                           // si³a napêdowa
-	ob->state.wheel_turn_angle = 0;      // k¹t skrêtu kierownicy - mo¿na ustaiwaæ go bezpoœrednio zak³adaj¹c, ¿e robot mo¿e krêciæ kierownic¹ dowolnie szybko,
-										 // jednaj gwa³towna zmiana po³o¿enia kierownicy (i tym samym kó³) mo¿e skutkowaæ poœlizgiem pojazdu
-	// parametry sterowania daj¹ce wiêkszy realizm zamiast state.wheel_turn_angle:
-	ob->wheel_turn_speed = 0;            // prêdkoœæ skrêtu kierownicy (dodatnia - w lewo)
-	ob->if_keep_steer_wheel = 0;         // czy kierownica zablokowana (jeœli nie, to wraca do po³o¿enia standardowego)
+	Vector3    pos      = ob->state.vPos;
+	const bool wantFuel = ob->state.amount_of_fuel < kLowFuel;
 
+	Vector3 forward = ob->state.qOrient.rotate_vector(Vector3(1, 0, 0));
+	Vector3 right   = ob->state.qOrient.rotate_vector(Vector3(0, 0, 1));
 
-	// TUTAJ NALE¯Y UMIEŒCIÆ ALGORYTM AUTONOMICZNEGO STEROWANIA POJAZDEM
+	int   bestIdx   = -1;
+	float bestScore = -1.0f;
 
-	const float LOW_FUEL = 20.0f;   // próg niskiego paliwa
+	Item* items = ob->terrain->p;
+	const long count = ob->terrain->number_of_items;
 
-	// --- wybór celu (system regu³owy) ---
-	int target_idx = -1;
-	float best_score = -1e30f;
-
-	for (long i = 0; i < teren->number_of_items; i++)
+	for (long i = 0; i < count; ++i)
 	{
-		Item& prz = przedmioty[i];
-		if (!prz.to_take || prz.if_taken_by_me) continue;
+		Item& item = items[i];
+		if (!item.to_take || item.if_taken_by_me)     continue;
+		if (wantFuel  && item.type != ITEM_BARREL)    continue;
+		if (!wantFuel && item.type != ITEM_COIN)      continue;
 
-		bool want_fuel = (ob->state.amount_of_fuel < LOW_FUEL);
-		bool is_barrel = (prz.type == ITEM_BARREL);
-		bool is_coin   = (prz.type == ITEM_COIN);
+		Vector3 diff = item.vPos - pos;
+		const float dist  = diff.length();
+		const float score = item.value / (dist < kMinDist ? kMinDist : dist);
 
-		if (want_fuel && !is_barrel) continue;   // ma³o paliwa -> tylko beczki
-		if (!want_fuel && !is_coin)  continue;   // du¿o paliwa -> tylko monety
-
-		Vector3 diff = prz.vPos - ob->state.vPos;
-		float dist = diff.length();
-		if (dist < 0.001f) dist = 0.001f;
-
-		// wynik: wartoœæ / odleg³oœæ (im bli¿ej i cenniejszy, tym lepszy)
-		float score = prz.value / dist;
-		if (score > best_score)
-		{
-			best_score = score;
-			target_idx = (int)i;
-		}
+		if (score > bestScore) { bestScore = score; bestIdx = static_cast<int>(i); }
 	}
 
-	// --- sterowanie w kierunku celu ---
-	if (target_idx >= 0)
+	if (bestIdx < 0) return;
+
+	Vector3 diff = items[bestIdx].vPos - pos;
+	float   dist = diff.length();
+	if (dist < kMinDist) dist = kMinDist;
+
+	const float cosA  = (diff ^ forward) / dist;
+	const float angle = (diff ^ right) > 0.0f ? -acosf(cosA) : acosf(cosA);
+
+	ob->state.wheel_turn_angle = angle;
+
+	if (dist < kStopDist)
 	{
-		Vector3 diff = przedmioty[target_idx].vPos - ob->state.vPos;
-		float dist = diff.length();
-
-		float dot_f = diff ^ vect_local_forward;   // iloczyn skalarny
-		float dot_r = diff ^ vect_local_right;
-
-		float alfa = acosf(dot_f / dist);           // k¹t [0, PI]
-
-		// znak: przedmiot z prawej -> skrêt w prawo (ujemny)
-		if (dot_r > 0.0f) alfa = -alfa;
-
-		ob->state.wheel_turn_angle = alfa;
-
-		// hamuj gdy bardzo blisko celu
-		if (dist < 3.0f)
-		{
-			ob->F = 0;
-			ob->breaking_degree = 1.0f;
-		}
+		ob->F               = 0.0f;
+		ob->breaking_degree = 1.0f;
 	}
-
-
 }
-
 void AutoPilot::ControlTest(MovableObject *_ob, float krok_czasowy, float czas_proby)
 {
 	bool koniec = false;
